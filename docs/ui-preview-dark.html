@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>通知记账 · UI 设计稿（深色）</title>
+<style>
+  :root{
+    --bg:#0E1116;
+    --card:#171B22;
+    --ink:#E9ECF2;
+    --ink2:#9BA4B4;
+    --ink3:#6B7484;
+    --line:#252B36;
+    --brand:#5B77FF;
+    --brand-soft:#1B2340;
+    --expense:#FF6B6B;
+    --income:#3DD9A0;
+    --warn:#E8A23D;
+    --warn-soft:#2A2218;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:#0A0D12;color:var(--ink);
+    padding:52px 32px 90px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- page header ---------- */
+  .page-head{max-width:1180px;margin:0 auto 46px;}
+  .kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+  h1{font-size:32px;letter-spacing:-.6px;margin:10px 0 12px;font-weight:700}
+  .lede{font-size:14px;line-height:1.75;color:var(--ink2);max-width:660px}
+  .tokens{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+  .tok{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:11px;padding:8px 13px;font-size:11.5px;color:var(--ink2);box-shadow:0 1px 2px rgba(18,20,26,.05)}
+  .sw{width:14px;height:14px;border-radius:5px;flex:0 0 auto}
+  .tok b{font-weight:600;color:var(--ink)}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+  .toc a{font-size:12px;color:var(--ink2);text-decoration:none;background:var(--card);border-radius:20px;padding:7px 14px;box-shadow:0 1px 2px rgba(18,20,26,.05)}
+  .toc a:hover{color:var(--brand)}
+
+  /* ---------- groups ---------- */
+  .group{max-width:1180px;margin:0 auto 54px}
+  .group > h2{
+    font-size:13px;font-weight:700;letter-spacing:.02em;
+    display:flex;align-items:center;gap:10px;margin-bottom:26px;color:var(--ink)
+  }
+  .group > h2::after{content:"";flex:1;height:1px;background:#D9DDE5}
+  .group > h2 span{font-size:11px;font-weight:500;color:var(--ink3)}
+
+  .canvas{display:flex;flex-wrap:wrap;gap:52px 38px;justify-content:center}
+
+  /* ---------- device ---------- */
+  figure{width:328px}
+  .device{
+    width:328px;height:714px;background:var(--card);border-radius:36px;overflow:hidden;
+    box-shadow:0 22px 60px rgba(0,0,0,.55),0 2px 10px rgba(0,0,0,.4);
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .screen{height:100%;display:flex;flex-direction:column;background:var(--bg);position:relative}
+  .statusbar{
+    height:30px;flex:0 0 30px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px;font-size:11px;font-weight:600;color:var(--ink);letter-spacing:.02em
+  }
+  .sb-r{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--ink2)}
+  .pg{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 16px 8px;position:relative;scrollbar-width:none}
+  .pg::-webkit-scrollbar{display:none}
+
+  /* ---------- tabbar ---------- */
+  .tabbar{
+    height:58px;flex:0 0 58px;display:flex;background:var(--card);
+    border-top:1px solid var(--line);padding-bottom:6px
+  }
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;color:var(--ink3);font-weight:500}
+  .tab svg{width:21px;height:21px}
+  .tab.on{color:var(--brand)}
+  .ti{position:relative;display:grid;place-items:center}
+  .bdg{position:absolute;top:-4px;right:-9px;min-width:15px;height:15px;border-radius:8px;background:#E03131;color:#fff;
+       font-size:9px;font-weight:700;font-style:normal;display:grid;place-items:center;padding:0 3px;
+       border:1.5px solid #fff;line-height:1;letter-spacing:0}
+  .tab span{font-size:10px}
+
+
+  /* ---------- common bits ---------- */
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:6px 0 12px}
+  .nav h3{font-size:20px;letter-spacing:-.3px;font-weight:700}
+  .icobtn{width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.8);display:grid;place-items:center;color:var(--ink2)}
+  .icobtn svg{width:16px;height:16px}
+  .nav-r{display:flex;gap:8px}
+
+  .card{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:0 1px 2px rgba(18,20,26,.04)}
+  .card+.card{margin-top:10px}
+
+  .amt{font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.2px}
+  .exp{color:var(--expense)}
+  .inc{color:var(--income)}
+  .muted{font-size:11px;color:var(--ink3);line-height:1.4}
+  .sec{font-size:11px;font-weight:600;color:var(--ink3);margin:16px 2px 8px;display:flex;justify-content:space-between;align-items:center}
+
+  .row{display:flex;align-items:center;gap:11px;padding:9px 0}
+  .row+.row{border-top:1px solid var(--line)}
+  .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-size:13px;font-weight:700;flex:0 0 auto;letter-spacing:0}
+  .ic.sm{width:30px;height:30px;border-radius:10px;font-size:12px}
+  .grow{flex:1;min-width:0}
+  .t1{font-size:13.5px;font-weight:600;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t2{font-size:11px;color:var(--ink3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rgt{text-align:right;flex:0 0 auto}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:7px;letter-spacing:.01em}
+  .b-on{background:rgba(12,166,120,.18);color:#5FE0B4}
+  .b-watch{background:rgba(194,118,10,.20);color:#F0B860}
+  .b-off{background:#F1F2F5;color:#8A91A0}
+  .b-info{background:var(--brand-soft);color:var(--brand)}
+
+  .dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex:0 0 auto}
+
+  /* ---------- 01 账单 ---------- */
+  .sumcard{background:var(--card);border-radius:18px;padding:16px;box-shadow:0 1px 2px rgba(18,20,26,.04)}
+  .sum-top{display:flex;align-items:baseline;justify-content:space-between}
+  .sum-lbl{font-size:11px;color:var(--ink3);font-weight:500}
+  .sum-big{font-size:29px;font-weight:700;letter-spacing:-1px;margin-top:4px;font-variant-numeric:tabular-nums}
+  .sum-big small{font-size:15px;font-weight:600;margin-right:1px}
+  .sum-side{text-align:right;font-size:10.5px;color:var(--ink3);line-height:1.65}
+  .sum-side b{display:block;font-size:12.5px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+
+  .alert{
+    display:flex;align-items:center;gap:9px;margin-top:10px;
+    background:var(--warn-soft);border-radius:12px;padding:10px 12px;color:#8A5205;font-size:11.5px;font-weight:500
+  }
+  .alert svg{width:15px;height:15px;flex:0 0 auto}
+  .alert .go{margin-left:auto;font-weight:600}
+
+  .listcard{background:var(--card);border-radius:18px;padding:4px 14px;margin-top:12px;box-shadow:0 1px 2px rgba(18,20,26,.04)}
+  .dayhd{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink3);padding:11px 0 2px;font-weight:500}
+  .src{font-size:9.5px;color:var(--ink3);display:inline-flex;align-items:center;gap:3px;margin-top:3px}
+
+  /* ---------- 02 记一笔 ---------- */
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .key{background:var(--card);border-radius:13px;height:46px;display:grid;place-items:center;font-size:19px;font-weight:600;letter-spacing:-.3px;box-shadow:0 1px 2px rgba(18,20,26,.04)}
+  .key.sub{background:rgba(255,255,255,.05);color:var(--ink2);font-size:16px}
+  .bigamt{font-size:38px;font-weight:700;letter-spacing:-1.6px;font-variant-numeric:tabular-nums;text-align:right;padding:6px 4px 2px}
+  .bigamt small{font-size:20px;font-weight:600;margin-right:3px;color:var(--ink3)}
+  .gridcat{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 6px;margin-top:6px}
+  .cat{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10.5px;color:var(--ink2)}
+  .cat .ci{width:42px;height:42px;border-radius:15px;background:var(--card);display:grid;place-items:center;box-shadow:0 1px 2px rgba(18,20,26,.04)}
+  .cat .ci svg{width:19px;height:19px}
+  .cat.on .ci{background:var(--brand);color:#fff;box-shadow:0 5px 14px rgba(59,91,219,.32)}
+  .cat.on{color:var(--brand);font-weight:600}
+  .fieldrow{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:13px;padding:12px 14px;font-size:12.5px;margin-top:8px}
+  .fieldrow .lbl{color:var(--ink3);font-size:11.5px;margin-right:8px}
+  .fieldrow .val{color:var(--ink);font-weight:500;display:flex;align-items:center;gap:6px}
+  .btn-primary{background:var(--brand);color:#fff;border-radius:14px;height:48px;display:grid;place-items:center;font-size:14.5px;font-weight:600;box-shadow:0 6px 18px rgba(59,91,219,.3)}
+  .btn-ghost{background:var(--card);color:var(--ink);border-radius:14px;height:46px;display:grid;place-items:center;font-size:13.5px;font-weight:600}
+
+  /* ---------- 03 统计 ---------- */
+  .monthsel{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+  .monthsel svg{width:15px;height:15px;color:var(--ink3)}
+  .trio{display:flex;gap:10px;margin-top:2px}
+  .trio > div{flex:1;background:var(--card);border-radius:14px;padding:11px 12px;box-shadow:0 1px 2px rgba(18,20,26,.04)}
+  .trio .k{font-size:10px;color:var(--ink3);margin-bottom:4px}
+  .trio .v{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+  .donutwrap{display:flex;align-items:center;gap:16px;margin-top:6px}
+  .donut{
+    width:118px;height:118px;border-radius:50%;position:relative;flex:0 0 auto;
+    background:conic-gradient(#3B5BDB 0 32%,#F08C00 32% 55%,#12B886 55% 72%,#E64980 72% 85%,#3A4250 85% 100%);
+  }
+  .donut::after{content:"";position:absolute;inset:23px;background:var(--card);border-radius:50%}
+  .donut .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center;z-index:1;line-height:1.35}
+  .donut .mid b{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+  .donut .mid span{font-size:9.5px;color:var(--ink3);display:block}
+  .legend{flex:1;display:flex;flex-direction:column;gap:9px}
+  .lg{display:flex;align-items:center;gap:7px;font-size:11.5px}
+  .lg .nm{flex:1;color:var(--ink2)}
+  .lg .pc{color:var(--ink3);font-size:10.5px;font-variant-numeric:tabular-nums}
+  .spark{width:100%;height:76px;display:block;margin-top:4px}
+  .axis{display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink3);padding:0 2px;margin-top:-2px}
+
+  /* ---------- 04 资产 ---------- */
+  .netcard{
+    background:linear-gradient(140deg,#2A3550 0%,#3B4A78 52%,#48539B 100%);
+    border-radius:20px;padding:18px;color:#fff;box-shadow:0 12px 28px rgba(42,53,80,.28)
+  }
+  .netcard .k{font-size:11px;opacity:.62;letter-spacing:.04em}
+  .netcard .big{font-size:32px;font-weight:700;letter-spacing:-1.2px;margin-top:5px;font-variant-numeric:tabular-nums}
+  .netcard .chg{font-size:10.5px;opacity:.7;margin-top:4px}
+  .netgrid{display:flex;margin-top:16px;padding-top:13px;border-top:1px solid rgba(255,255,255,.13)}
+  .netgrid > div{flex:1}
+  .netgrid .k2{font-size:9.5px;opacity:.55}
+  .netgrid .v2{font-size:13px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+  .stack{display:flex;height:7px;border-radius:4px;overflow:hidden;margin-top:14px}
+  .stack i{display:block;height:100%}
+
+  /* ---------- 05 账户详情 ---------- */
+  .creditcard{
+    background:linear-gradient(135deg,#1F2A44 0%,#33406B 55%,#46528F 100%);
+    border-radius:20px;padding:18px;color:#fff;position:relative;overflow:hidden;
+    box-shadow:0 12px 28px rgba(31,42,68,.3)
+  }
+  .creditcard::after{content:"";position:absolute;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.05);right:-50px;top:-70px}
+  .cc-top{display:flex;justify-content:space-between;align-items:center;font-size:11px;opacity:.75}
+  .cc-num{font-size:10.5px;letter-spacing:.16em;opacity:.6;margin-top:2px}
+  .cc-debt{font-size:28px;font-weight:700;letter-spacing:-1px;margin-top:14px;font-variant-numeric:tabular-nums}
+  .cc-debt small{font-size:12px;font-weight:500;opacity:.6;display:block;letter-spacing:0;margin-bottom:2px}
+  .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.16);margin-top:14px;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:3px;background:#F5A524}
+  .cc-foot{display:flex;justify-content:space-between;font-size:10px;opacity:.68;margin-top:7px}
+
+  /* ---------- 06 规则 ---------- */
+  .rule-row{display:flex;align-items:center;gap:11px;padding:11px 0}
+  .rule-row+.rule-row{border-top:1px solid var(--line)}
+  .stats-mini{font-size:9.5px;color:var(--ink3);margin-top:3px}
+
+  /* ---------- 07 向导 ---------- */
+  .steps{display:flex;gap:5px;padding:2px 0 14px}
+  .steps i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.13)}
+  .steps i.done{background:var(--brand)}
+  .steps i.cur{background:var(--brand);opacity:.45}
+  .noti-src{font-size:10.5px;color:var(--ink3);margin-bottom:7px;display:flex;align-items:center;gap:6px}
+  .noti-text{font-size:13.5px;line-height:2;color:var(--ink);letter-spacing:-.1px}
+  .chip{display:inline-block;padding:1px 7px;border-radius:6px;font-weight:600;border:1px dashed transparent}
+  .chip-brand{background:var(--brand-soft);color:var(--brand);border-color:rgba(59,91,219,.4)}
+  .chip-green{background:rgba(12,166,120,.18);color:#5FE0B4;border-color:rgba(6,122,87,.35)}
+  .chip-gray{background:#F1F2F5;color:var(--ink2);border-color:rgba(255,255,255,.14)}
+  .tagline{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .tag{font-size:11px;background:var(--card);border-radius:8px;padding:5px 9px;color:var(--ink2);display:inline-flex;align-items:center;gap:5px}
+  .hint{font-size:10.5px;color:var(--ink3);line-height:1.7;margin-top:10px}
+  .bottom-cta{position:absolute;left:0;right:0;bottom:0;padding:10px 16px 12px;background:linear-gradient(transparent,rgba(242,243,246,.96) 40%)}
+  .cta-2{display:flex;gap:9px}
+  .cta-2 > *{flex:1}
+
+  /* ---------- 08 测试 ---------- */
+  .tres{display:flex;gap:10px;padding:11px;border-radius:13px;background:var(--card);margin-bottom:9px;align-items:flex-start}
+  .tres .mark{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;margin-top:1px}
+  .tres .mark svg{width:11px;height:11px}
+  .m-ok{background:rgba(12,166,120,.18);color:#5FE0B4}
+  .m-no{background:rgba(224,49,49,.18);color:#FF8787}
+  .tres .body{flex:1;min-width:0}
+  .tres .res{font-size:11px;font-weight:700}
+  .tres .line{font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.6}
+  .tres .line b{color:var(--ink2);font-weight:600}
+
+  /* ---------- 09 待确认 ---------- */
+  .pend{background:var(--card);border-radius:15px;padding:12px;margin-bottom:9px;box-shadow:0 1px 2px rgba(18,20,26,.04)}
+  .pend-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .pend-hd .app{font-size:10.5px;color:var(--ink3)}
+  .pend-raw{font-size:11px;color:var(--ink2);line-height:1.6;background:rgba(255,255,255,.05);border-radius:9px;padding:8px 9px;margin-bottom:9px}
+  .extract{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .ex{font-size:11px;font-weight:600;padding:4px 9px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;background:var(--line);color:var(--ink2)}
+  .ex.k{background:transparent;color:var(--ink3);font-weight:500;padding-left:0;font-size:10px}
+  .ex.ok{background:rgba(12,166,120,.18);color:#5FE0B4}
+  .ex.warn{background:var(--warn-soft);color:#8A5205}
+  .pend-act{display:flex;gap:7px}
+  .mini{flex:1;height:30px;border-radius:9px;display:grid;place-items:center;font-size:11.5px;font-weight:600;background:var(--line);color:var(--ink2)}
+  .mini.primary{background:var(--brand);color:#fff}
+
+  /* ---------- 10 日志 ---------- */
+  .filters{display:flex;gap:7px;overflow:hidden;padding:2px 0 12px}
+  .fl{font-size:11.5px;padding:6px 12px;border-radius:9px;background:var(--card);color:var(--ink2);white-space:nowrap;font-weight:500}
+  .fl.on{background:var(--ink);color:#fff}
+  .log{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .log .lt{font-size:10px;color:var(--ink3);width:34px;flex:0 0 auto;padding-top:2px;font-variant-numeric:tabular-nums}
+  .log .lc{flex:1;min-width:0}
+  .log .l1{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .log .l2{font-size:10.5px;color:var(--ink3);margin-top:3px;line-height:1.55}
+  .log .l2 em{font-style:normal;color:#A9640A;font-weight:600}
+
+  /* ---------- 11 回收站 ---------- */
+  .banner{background:var(--card);border-radius:13px;padding:11px 13px;font-size:11px;color:var(--ink2);line-height:1.6;display:flex;gap:9px;margin-bottom:12px}
+  .banner svg{width:15px;height:15px;flex:0 0 auto;color:var(--warn);margin-top:1px}
+  .trash{background:var(--card);border-radius:15px;padding:12px;margin-bottom:9px;box-shadow:0 1px 2px rgba(18,20,26,.04)}
+  .trash-hd{display:flex;align-items:center;gap:10px}
+  .countdown{font-size:10px;color:#A9640A;background:var(--warn-soft);border-radius:6px;padding:2px 7px;font-weight:600}
+  .trash-act{display:flex;gap:8px;margin-top:11px}
+  .trash-act > div{flex:1;height:30px;border-radius:9px;display:grid;place-items:center;font-size:11.5px;font-weight:600;background:#EEF1FE;color:var(--brand)}
+  .trash-act > div.danger{background:var(--line);color:#C92A2A}
+  .compact .set{padding:9px 14px}
+  .compact .ico{width:24px;height:24px;border-radius:7px}
+  .compact .sec{margin:10px 2px 6px}
+
+  /* ---------- 12 设置 ---------- */
+  .setgrp{background:var(--card);border-radius:15px;overflow:hidden;margin-bottom:12px}
+  .set{display:flex;align-items:center;gap:11px;padding:10px 14px;font-size:12.5px}
+  .set+.set{border-top:1px solid var(--line)}
+  .set .ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto}
+  .set .ico svg{width:14px;height:14px}
+  .set .grow{font-weight:500}
+  .set .rv{font-size:11.5px;color:var(--ink3);display:flex;align-items:center;gap:6px}
+  .chev{width:13px;height:13px;color:#4A5260}
+  .sw-t{width:38px;height:22px;border-radius:11px;background:rgba(255,255,255,.14);position:relative;flex:0 0 auto}
+  .sw-t i{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--card);top:2px;left:2px;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:.2s}
+  .sw-t.on{background:var(--brand)}
+  .sw-t.on i{left:18px}
+
+  .okmark{width:54px;height:54px;border-radius:50%;background:#E7F7F1;color:#0CA678;display:grid;place-items:center;margin:0 auto}
+  .okmark svg{width:25px;height:25px}
+  .noti-card{background:rgba(255,255,255,.96);border-radius:16px;padding:11px 12px;margin-top:10px;box-shadow:0 8px 24px rgba(0,0,0,.22)}
+
+  /* ---------- caption ---------- */
+  figcaption{margin-top:16px;padding-left:2px}
+  figcaption .cap-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  figcaption .num{font-size:10px;font-weight:700;color:var(--ink3);letter-spacing:.08em}
+  figcaption .name{font-size:13px;font-weight:600;letter-spacing:-.1px}
+  figcaption p{font-size:11.5px;line-height:1.7;color:var(--ink2)}
+  figcaption .flag{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;color:#A9640A;background:var(--warn-soft);border-radius:5px;padding:1px 6px;vertical-align:1px}
+
+  /* ---------- decisions ---------- */
+  .decisions{max-width:1180px;margin:0 auto;background:var(--card);border-radius:20px;padding:30px 34px;box-shadow:0 1px 3px rgba(18,20,26,.06)}
+  .decisions h2{font-size:16px;letter-spacing:-.2px;margin-bottom:6px}
+  .decisions .sub{font-size:12px;color:var(--ink2);margin-bottom:22px}
+  .decisions ol{list-style:none;counter-reset:d}
+  .decisions li{counter-increment:d;display:flex;gap:14px;padding:14px 0;border-top:1px solid #F1F2F5}
+  .decisions li::before{content:counter(d,decimal-leading-zero);font-size:11px;font-weight:700;color:var(--ink3);flex:0 0 auto;padding-top:2px;letter-spacing:.06em}
+  .decisions .dt{font-size:13px;font-weight:600;margin-bottom:4px}
+  .decisions .dd{font-size:12px;line-height:1.75;color:var(--ink2)}
+  .decisions .dd b{color:var(--ink);font-weight:600}
+  .decisions code{background:#F1F2F5;padding:1px 5px;border-radius:4px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  @media (max-width:760px){
+    body{padding:34px 18px 60px}
+    h1{font-size:25px}
+    .decisions{padding:24px 20px}
+  }
+
+  /* ===== 深色专用修正 ===== */
+  .badge.b-on{background:rgba(12,166,120,.16);color:#5FE0B4}
+  .badge.b-watch{background:rgba(194,118,10,.18);color:#F0B860}
+  .badge.b-off{background:rgba(255,255,255,.07);color:#8E96A6}
+  .badge.b-info{background:rgba(91,119,255,.18);color:#9AAEFF}
+  .alert{color:#F0B860}
+  .chip-brand{background:rgba(91,119,255,.16);color:#9AAEFF;border-color:rgba(91,119,255,.36)}
+  .chip-green{background:rgba(12,166,120,.16);color:#5FE0B4;border-color:rgba(12,166,120,.32)}
+  .chip-gray{background:rgba(255,255,255,.07);color:#A6ADBA;border-color:rgba(255,255,255,.14)}
+  .ex{background:rgba(255,255,255,.06);color:#A6ADBA}
+  .ex.ok{background:rgba(12,166,120,.16);color:#5FE0B4}
+  .ex.warn{background:rgba(194,118,10,.18);color:#F0B860}
+  .m-ok{background:rgba(12,166,120,.16);color:#5FE0B4}
+  .m-no{background:rgba(224,49,49,.16);color:#FF8787}
+  .okmark{background:rgba(12,166,120,.15);color:#3DD9A0}
+  .countdown{background:rgba(194,118,10,.18);color:#F0B860}
+  .fl{background:#1B2028;color:var(--ink2)}
+  .fl.on{background:var(--brand);color:#fff}
+  .icobtn{background:rgba(255,255,255,.07);color:var(--ink2)}
+  .key{background:#1B2028}
+  .key.sub{background:#232830;color:var(--ink2)}
+  .noti-card{background:rgba(26,31,39,.97);border:1px solid rgba(255,255,255,.07)}
+  .mini{background:rgba(255,255,255,.08);color:var(--ink2)}
+  .pend-raw{background:rgba(255,255,255,.04);color:var(--ink2)}
+  .tag{background:rgba(255,255,255,.06);color:var(--ink2)}
+  .tres{background:var(--card)}
+  .btn-ghost{background:#1B2028;color:var(--ink)}
+  .bottom-cta{background:linear-gradient(transparent,rgba(14,17,22,.97) 42%)}
+  .trash-act > div{background:rgba(91,119,255,.16);color:#9AAEFF}
+  .trash-act > div.danger{background:rgba(255,255,255,.07);color:#FF8787}
+  .sw-t{background:rgba(255,255,255,.16)}
+  .sw-t i{background:#E9ECF2}
+  .fieldrow{background:var(--card)}
+  .setgrp{background:var(--card)}
+  .card{background:var(--card)}
+  .sumcard{background:var(--card)}
+  .trio > div{background:var(--card)}
+  .donut::after{background:var(--card)}
+  .bdg{border-color:#171B22}
+  .dayhd{color:var(--ink3)}
+  .banner svg{color:var(--warn)}
+  .alert svg{color:var(--warn)}
+  [style*="color:#067A57"]{color:#5FE0B4!important}
+  [style*="color:#C92A2A"]{color:#FF8787!important}
+  [style*="color:#3B5BDB"]{color:#9AAEFF!important}
+  [style*="color:#C2760A"]{color:#F0B860!important}
+  [style*="color:#8A5205"]{color:#F0B860!important}
+  [style*="color:#7A4E0B"]{color:#B7A183!important}
+  [style*="color:#4A5578"]{color:#9BA4B4!important}
+  [style*="color:#5B6270"]{color:#9BA4B4!important}
+  [style*="color:#9AA1AE"]{color:#6B7484!important}
+  [style*="color:#12141A"]{color:#E9ECF2!important}
+  [style*="color:#B4BAC5"]{color:#5A6272!important}
+  [style*="color:#8A91A0"]{color:#8E96A6!important}
+  [style*="color:#0CA678"]{color:#3DD9A0!important}
+  [style*="color:#6B7280"]{color:#9BA4B4!important}
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <div class="kicker">UI Spec · v1 · Dark</div>
+  <h1>通知记账 · 界面设计稿（深色）</h1>
+  <p class="lede">
+    同一个 14 屏的深色版本，用于核对两套主题下的对比度。深色不是把白色换成黑色——支出红、收入绿都提亮了一档，图标底色改为半透明叠加，避免深色背景上出现发光的色块。核心思路是让「解析规则」这件事在界面上完全不像技术操作——用户看到的只是粘贴一条通知、点一下数字。下面每一屏下方标了该页的设计意图。
+  </p>
+
+  <div class="tokens">
+    <span class="tok"><i class="sw" style="background:#5B77FF"></i>主色 <b>#5B77FF</b></span>
+    <span class="tok"><i class="sw" style="background:#FF6B6B"></i>支出 <b>#FF6B6B</b></span>
+    <span class="tok"><i class="sw" style="background:#3DD9A0"></i>收入 <b>#3DD9A0</b></span>
+    <span class="tok"><i class="sw" style="background:#E8A23D"></i>提醒 <b>#E8A23D</b></span>
+    <span class="tok"><i class="sw" style="background:#E9ECF2"></i>正文 <b>#E9ECF2</b></span>
+    <span class="tok"><i class="sw" style="background:#0E1116;border:1px solid #2A3140"></i>底色 <b>#0E1116</b></span>
+  </div>
+
+  <nav class="toc">
+    <a href="#g1">核心记账</a>
+    <a href="#g2">解析规则</a>
+    <a href="#g3">数据安全</a>
+    <a href="#decisions">已确认决策</a>
+    <a href="ui-preview.html">切换到浅色版</a>
+  </nav>
+</header>
+
+<!-- ============ 第一组 ============ -->
+<section class="group" id="g1">
+  <h2>核心记账 <span>5 屏</span></h2>
+  <div class="canvas">
+
+    <!-- 01 账单 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <h3>账单</h3>
+              <div class="nav-r">
+                <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg></div>
+                <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M7 12h10M10 17h4"/></svg></div>
+              </div>
+            </div>
+
+            <div class="sumcard">
+              <div class="sum-top">
+                <div>
+                  <div class="sum-lbl">10 月支出</div>
+                  <div class="sum-big exp"><small>¥</small>1,286.40</div>
+                </div>
+                <div class="sum-side">
+                  收入<b class="inc">12,400.00</b>
+                  结余<b>11,113.60</b>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:10px;padding:11px 13px">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+                <span style="color:#5B6270">本月预算已用 43%</span>
+                <span style="color:#5B6270">剩 <b style="color:#12141A;font-weight:700">1,714</b></span>
+              </div>
+              <div class="bar" style="background:rgba(255,255,255,.10);margin-top:8px"><i style="width:43%;background:#3B5BDB"></i></div>
+            </div>
+
+            <div class="listcard">
+              <div class="dayhd"><span>今天</span><span>支出 ¥58.00</span></div>
+              <div class="row">
+                <div class="ic" style="background:rgba(224,49,49,.18);color:#FF8787">餐</div>
+                <div class="grow">
+                  <div class="t1">瑞幸咖啡(国贸店)</div>
+                  <div class="t2">餐饮 · 微信零钱</div>
+                </div>
+                <div class="rgt">
+                  <div class="amt exp">-25.00</div>
+                  <div class="src"><i class="dot" style="background:#3B5BDB"></i>通知</div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(245,140,0,.18);color:#FFB454">餐</div>
+                <div class="grow">
+                  <div class="t1">美团外卖</div>
+                  <div class="t2">餐饮 · 招商银行</div>
+                </div>
+                <div class="rgt">
+                  <div class="amt exp">-33.00</div>
+                  <div class="src"><i class="dot" style="background:#3B5BDB"></i>通知</div>
+                </div>
+              </div>
+              <div class="dayhd"><span>昨天</span><span>支出 ¥3,218.60</span></div>
+              <div class="row">
+                <div class="ic" style="background:rgba(34,139,230,.18);color:#74B8F5">交</div>
+                <div class="grow">
+                  <div class="t1">滴滴出行</div>
+                  <div class="t2">交通 · 支付宝</div>
+                </div>
+                <div class="rgt">
+                  <div class="amt exp">-18.60</div>
+                  <div class="src"><i class="dot" style="background:#3B5BDB"></i>通知</div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(112,112,190,.22);color:#B4B4F0">住</div>
+                <div class="grow">
+                  <div class="t1">房租</div>
+                  <div class="t2">居住 · 招商银行</div>
+                </div>
+                <div class="rgt">
+                  <div class="amt exp">-3,200.00</div>
+                  <div class="src"><i class="dot" style="background:#4A5260"></i>手动</div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(12,166,120,.18);color:#5FE0B4">工</div>
+                <div class="grow">
+                  <div class="t1">工资</div>
+                  <div class="t2">工资 · 招商银行</div>
+                </div>
+                <div class="rgt">
+                  <div class="amt inc">+12,400.00</div>
+                  <div class="src"><i class="dot" style="background:#3B5BDB"></i>通知</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>账单</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3.2"/><path d="M15.5 12.5h2.2"/></svg><span>资产</span></div>
+            <div class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><i class="bdg">3</i></span><span>待确认</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19V11M12 19V5M18 19v-5"/></svg><span>统计</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h5M13 8h7M4 16h9M17 16h3"/><circle cx="11" cy="8" r="2.1"/><circle cx="15" cy="16" r="2.1"/></svg><span>设置</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">01</span><span class="name">账单首页</span></div>
+        <p>首屏给「本月支出」，净资产放到资产页。待确认的提示交给了底部 Tab 的红色角标，这里不再重复放横条——同一个信息说两遍就是噪音。每条账单右下角标了来源（通知/手动），方便你判断是否解析出错。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 02 记一笔 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <h3 style="font-size:16px">记一笔</h3>
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+            </div>
+
+            <div class="bigamt exp"><small>¥</small>25.00</div>
+
+            <div class="gridcat">
+              <div class="cat on">
+                <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8.5 3.5v7a2 2 0 1 0 4 0v-7"/><path d="M10.5 10.5V21"/><path d="M17 3.5c-1.6 1.4-2 3.3-2 5.5 0 1.4.7 2 1.5 2.2V21"/></svg></div>
+                <span>餐饮</span>
+              </div>
+              <div class="cat">
+                <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-4.5L6.5 7h11L20 11.5V16"/><path d="M4 16h16"/><circle cx="7.5" cy="17.6" r="1.5"/><circle cx="16.5" cy="17.6" r="1.5"/></svg></div>
+                <span>交通</span>
+              </div>
+              <div class="cat">
+                <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 8h13l-1.2 12h-10.6L5.5 8z"/><path d="M9 8V6.2a3 3 0 0 1 6 0V8"/></svg></div>
+                <span>购物</span>
+              </div>
+              <div class="cat">
+                <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9.5H4z"/><path d="M10 20.5v-6h4v6"/></svg></div>
+                <span>居住</span>
+              </div>
+              <div class="cat">
+                <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.8" width="10" height="18.4" rx="2.4"/><path d="M10.8 18.4h2.4"/></svg></div>
+                <span>通讯</span>
+              </div>
+              <div class="cat">
+                <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M10.4 8.8l5.4 3.2-5.4 3.2z"/></svg></div>
+                <span>娱乐</span>
+              </div>
+              <div class="cat">
+                <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg></div>
+                <span>医疗</span>
+              </div>
+              <div class="cat">
+                <div class="ci"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="7" cy="7" r="1.6"/><circle cx="12" cy="7" r="1.6"/><circle cx="17" cy="7" r="1.6"/><circle cx="7" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17" cy="12" r="1.6"/></svg></div>
+                <span>更多</span>
+              </div>
+            </div>
+
+            <div class="fieldrow" style="margin-top:14px">
+              <div class="val"><span class="lbl">账户</span>微信零钱</div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+            </div>
+            <div class="fieldrow">
+              <div class="val"><span class="lbl">时间</span>今天 09:38</div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+            </div>
+
+            <div class="keypad">
+              <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+              <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+              <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+              <div class="key sub">.</div><div class="key">0</div>
+              <div class="key sub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:19px;height:19px"><path d="M9 5h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z"/><path d="M12.5 9.5l4 5M16.5 9.5l-4 5"/></svg></div>
+            </div>
+            <div class="btn-primary" style="margin-top:10px;height:44px">保存</div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">02</span><span class="name">手动记一笔</span></div>
+        <p>继承自选类型的部分：分类九宫格 + 大号金额键盘。键盘支持直接输入算式（如 12.5+8），账户和时间默认已填，正常情况下点两下就能记完。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 03 统计 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <div class="monthsel">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+                2026 年 10 月
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+              </div>
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M7 12h10M10 17h4"/></svg></div>
+            </div>
+
+            <div class="trio">
+              <div><div class="k">收入</div><div class="v inc">12,400</div></div>
+              <div><div class="k">支出</div><div class="v exp">1,286</div></div>
+              <div><div class="k">结余</div><div class="v">11,114</div></div>
+            </div>
+
+            <div class="sec">支出构成 <span style="font-weight:500;color:#4A5260">共 1,286.40</span></div>
+            <div class="card">
+              <div class="donutwrap">
+                <div class="donut">
+                  <div class="mid"><b>1,286</b><span>本月支出</span></div>
+                </div>
+                <div class="legend">
+                  <div class="lg"><i class="dot" style="background:#3B5BDB"></i><span class="nm">餐饮</span><span class="pc">32%</span></div>
+                  <div class="lg"><i class="dot" style="background:#F08C00"></i><span class="nm">居住</span><span class="pc">23%</span></div>
+                  <div class="lg"><i class="dot" style="background:#12B886"></i><span class="nm">交通</span><span class="pc">17%</span></div>
+                  <div class="lg"><i class="dot" style="background:#E64980"></i><span class="nm">购物</span><span class="pc">13%</span></div>
+                  <div class="lg"><i class="dot" style="background:#3A4250"></i><span class="nm">其他</span><span class="pc">15%</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sec">近 7 天趋势</div>
+            <div class="card" style="padding:12px 10px 8px">
+              <svg class="spark" viewBox="0 0 280 76" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#5B77FF" stop-opacity=".18"/>
+                    <stop offset="100%" stop-color="#5B77FF" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <polygon points="6,62 48,50 90,56 132,30 174,40 216,20 262,34 262,76 6,76" fill="url(#g1)"/>
+                <polyline points="6,62 48,50 90,56 132,30 174,40 216,20 262,34" fill="none" stroke="#5B77FF" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+                <circle cx="216" cy="20" r="3.2" fill="#fff" stroke="#5B77FF" stroke-width="2.2"/>
+              </svg>
+              <div class="axis"><span>10/14</span><span>10/16</span><span>10/18</span><span>10/20</span></div>
+            </div>
+
+            <div class="sec">本月预算</div>
+            <div class="card" style="padding:13px">
+              <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:8px">
+                <span style="color:#5B6270">已用 <b style="color:#12141A">1,286</b> / 3,000</span>
+                <span style="color:#0CA678;font-weight:600">剩 1,714</span>
+              </div>
+              <div class="bar" style="background:rgba(255,255,255,.10);margin-top:0"><i style="width:43%;background:#3B5BDB"></i></div>
+              <div class="muted" style="margin-top:7px">日均可用 114 元，还有 15 天</div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>账单</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3.2"/><path d="M15.5 12.5h2.2"/></svg><span>资产</span></div>
+            <div class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><i class="bdg">3</i></span><span>待确认</span></div>
+            <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19V11M12 19V5M18 19v-5"/></svg><span>统计</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h5M13 8h7M4 16h9M17 16h3"/><circle cx="11" cy="8" r="2.1"/><circle cx="15" cy="16" r="2.1"/></svg><span>设置</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">03</span><span class="name">统计</span></div>
+        <p>把「收入 / 支出 / 结余」三格固定在顶部，往下是分类环形图、趋势和预算。预算进度条是本页第 3 优先级内容，往下滚才看到。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 04 资产 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <h3>资产</h3>
+              <div class="nav-r">
+                <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+              </div>
+            </div>
+
+            <div class="netcard">
+              <div class="k">净资产</div>
+              <div class="big">¥ 50,426.70</div>
+              <div class="chg">较上月 +2,318.40</div>
+              <div class="netgrid">
+                <div><div class="k2">总资产</div><div class="v2">55,206.70</div></div>
+                <div><div class="k2">总负债</div><div class="v2">4,780.00</div></div>
+                <div><div class="k2">本月光变动</div><div class="v2">+2,318.40</div></div>
+              </div>
+              <div class="stack">
+                <i style="background:#7B8FF5;width:54%"></i>
+                <i style="background:#5C74E8;width:22%"></i>
+                <i style="background:#4058C9;width:16%"></i>
+                <i style="background:#F5A524;width:8%"></i>
+              </div>
+            </div>
+
+            <div class="sec">资产 <span style="font-weight:500;color:#4A5260">3 个账户</span></div>
+            <div class="listcard" style="margin-top:0;padding:2px 14px">
+              <div class="row">
+                <div class="ic" style="background:rgba(34,139,230,.18);color:#74B8F5">招</div>
+                <div class="grow"><div class="t1">招商银行 储蓄卡</div><div class="t2">尾号 4521</div></div>
+                <div class="rgt"><div class="amt">52,180.20</div></div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(26,99,216,.22);color:#7FAEFF">支</div>
+                <div class="grow"><div class="t1">支付宝余额</div><div class="t2">余额 + 余额宝</div></div>
+                <div class="rgt"><div class="amt">3,240.00</div></div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(12,166,120,.18);color:#5FE0B4">微</div>
+                <div class="grow"><div class="t1">微信零钱</div><div class="t2">默认账户</div></div>
+                <div class="rgt"><div class="amt">486.50</div></div>
+              </div>
+            </div>
+
+            <div class="sec">负债 <span style="font-weight:500;color:#4A5260">2 个账户</span></div>
+            <div class="listcard" style="margin-top:0;padding:2px 14px">
+              <div class="row">
+                <div class="ic" style="background:rgba(224,49,49,.18);color:#FF8787">招</div>
+                <div class="grow"><div class="t1">招商银行 信用卡</div><div class="t2">可用额度 16,500 · 23 日还款</div></div>
+                <div class="rgt">
+                  <div class="amt exp">-3,500.00</div>
+                  <div class="src" style="color:#9AA1AE">欠款</div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(245,140,0,.18);color:#FFB454">花</div>
+                <div class="grow"><div class="t1">花呗</div><div class="t2">下期账单 11 月 9 日</div></div>
+                <div class="rgt">
+                  <div class="amt exp">-1,280.00</div>
+                  <div class="src" style="color:#9AA1AE">欠款</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>账单</span></div>
+            <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3.2"/><path d="M15.5 12.5h2.2"/></svg><span>资产</span></div>
+            <div class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><i class="bdg">3</i></span><span>待确认</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19V11M12 19V5M18 19v-5"/></svg><span>统计</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h5M13 8h7M4 16h9M17 16h3"/><circle cx="11" cy="8" r="2.1"/><circle cx="15" cy="16" r="2.1"/></svg><span>设置</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">04</span><span class="name">资产总览</span></div>
+        <p>净资产是深色渐变卡，负债账户用红色负数呈现、并明确写「欠款」二字，避免看到负号产生误解。资产和负债分两组列，不混在一起。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 05 账户详情 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18" r="1.7"/></svg></div>
+            </div>
+
+            <div class="creditcard">
+              <div class="cc-top"><span>招商银行 · 信用卡</span><span>VISA</span></div>
+              <div class="cc-num">**** **** **** 8812</div>
+              <div class="cc-debt"><small>当前欠款</small>¥ 3,500.00</div>
+              <div class="bar"><i style="width:17.5%"></i></div>
+              <div class="cc-foot">
+                <span>已用 3,500 / 20,000</span>
+                <span>可用 16,500</span>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:9px;margin-top:11px">
+              <div class="btn-ghost" style="flex:1;height:40px;font-size:12.5px">校准余额</div>
+              <div class="btn-primary" style="flex:1;height:40px;font-size:12.5px;box-shadow:none">还款</div>
+            </div>
+
+            <div class="card" style="margin-top:11px;padding:12px 14px">
+              <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#5B6270;line-height:1.9">
+                <span>账单日 <b style="color:#12141A">每月 5 日</b></span>
+                <span>还款日 <b style="color:#12141A">每月 23 日</b></span>
+              </div>
+            </div>
+
+            <div class="sec">本月流水 <span style="font-weight:500;color:#4A5260">4 笔</span></div>
+            <div class="listcard" style="margin-top:0;padding:2px 14px">
+              <div class="row">
+                <div class="ic" style="background:rgba(12,166,120,.18);color:#5FE0B4">还</div>
+                <div class="grow"><div class="t1">信用卡还款</div><div class="t2">10-18 · 转账</div></div>
+                <div class="rgt"><div class="amt inc">+1,000.00</div></div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(224,49,49,.18);color:#FF8787">餐</div>
+                <div class="grow"><div class="t1">海底捞(国贸)</div><div class="t2">10-16 · 餐饮</div></div>
+                <div class="rgt"><div class="amt exp">-328.00</div></div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(34,139,230,.18);color:#74B8F5">交</div>
+                <div class="grow"><div class="t1">中石化加油站</div><div class="t2">10-12 · 交通</div></div>
+                <div class="rgt"><div class="amt exp">-400.00</div></div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(112,112,190,.22);color:#B4B4F0">调</div>
+                <div class="grow"><div class="t1">余额调整</div><div class="t2">10-09 · 不计收支</div></div>
+                <div class="rgt"><div class="amt" style="color:#9AA1AE">-22.00</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">05</span><span class="name">账户详情 · 信用卡</span></div>
+        <p>欠款用卡片形式突出，额度进度条在接近上限时会变黄变红。「余额调整」是一条独立记录、不计入收支统计，保证余额能对上又不会污染账单。</p>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============ 第二组 ============ -->
+<section class="group" id="g2">
+  <h2>解析规则与提示 <span>7 屏 · 核心亮点</span></h2>
+  <div class="canvas">
+
+    <!-- 06 规则列表 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <h3 style="font-size:16px">解析规则</h3>
+              <div class="icobtn" style="background:var(--card);color:#3B5BDB"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            </div>
+
+            <div class="sec" style="margin-top:0">内置规则 <span style="font-weight:500;color:#4A5260">不可删除</span></div>
+            <div class="listcard" style="margin-top:0;padding:2px 14px">
+              <div class="rule-row">
+                <div class="ic" style="background:rgba(12,166,120,.18);color:#5FE0B4">微</div>
+                <div class="grow">
+                  <div class="t1">微信支付</div>
+                  <div class="stats-mini">近 7 天命中 42 条</div>
+                </div>
+                <span class="badge b-on">已启用</span>
+              </div>
+              <div class="rule-row">
+                <div class="ic" style="background:rgba(26,99,216,.22);color:#7FAEFF">支</div>
+                <div class="grow">
+                  <div class="t1">支付宝</div>
+                  <div class="stats-mini">近 7 天命中 28 条</div>
+                </div>
+                <span class="badge b-on">已启用</span>
+              </div>
+            </div>
+
+            <div class="sec">我的规则</div>
+            <div class="listcard" style="margin-top:0;padding:2px 14px">
+              <div class="rule-row">
+                <div class="ic" style="background:rgba(245,140,0,.18);color:#FFB454">美</div>
+                <div class="grow">
+                  <div class="t1">美团外卖</div>
+                  <div class="stats-mini">观察中 · 已确认 2/3 条</div>
+                </div>
+                <span class="badge b-watch">观察中</span>
+              </div>
+              <div class="rule-row">
+                <div class="ic" style="background:#2A2F3A;color:#E9ECF2">抖</div>
+                <div class="grow">
+                  <div class="t1">抖音商城</div>
+                  <div class="stats-mini">近 7 天命中 0 条</div>
+                </div>
+                <span class="badge b-off">已停用</span>
+              </div>
+              <div class="rule-row">
+                <div class="ic" style="background:rgba(224,49,49,.18);color:#FF8787">拼</div>
+                <div class="grow">
+                  <div class="t1">拼多多</div>
+                  <div class="stats-mini" style="color:#A9640A">可能已失效，通知格式有变</div>
+                </div>
+                <span class="badge b-watch">待更新</span>
+              </div>
+            </div>
+
+            <div class="sec">兜底</div>
+            <div class="listcard" style="margin-top:0;padding:2px 14px">
+              <div class="rule-row">
+                <div class="ic" style="background:#F1F2F5;color:#6B7280">通</div>
+                <div class="grow">
+                  <div class="t1">通用规则</div>
+                  <div class="stats-mini">命中后进入待确认，不会直接记账</div>
+                </div>
+                <div class="sw-t on"><i></i></div>
+              </div>
+            </div>
+
+            <div class="hint" style="text-align:center;margin-top:14px">只有白名单里的应用通知会被读取</div>
+          </div>
+          <div class="bottom-cta" style="position:absolute">
+            <div class="btn-primary" style="height:44px">新建规则</div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">06</span><span class="name">规则列表</span></div>
+        <p>三组结构：内置（微信/支付宝，不可删）、我的规则、兜底。每条规则直接显示「近 7 天命中数」，命中归零时变成「可能已失效」——提示你通知格式变了该更新了。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 07 向导 - 点选 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+              <h3 style="font-size:15px">新建规则</h3>
+              <span style="font-size:11px;color:#9AA1AE">3 / 8</span>
+            </div>
+
+            <div class="steps">
+              <i class="done"></i><i class="done"></i><i class="cur"></i>
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+
+            <div style="font-size:15px;font-weight:700;letter-spacing:-.2px;margin-bottom:5px">这笔钱是多少？花给谁了？</div>
+            <div class="hint" style="margin-top:0;margin-bottom:12px">直接点下面通知里的数字和名字就行，不用写任何规则。</div>
+
+            <div class="card" style="padding:16px 14px">
+              <div class="noti-src">
+                <div class="ic sm" style="background:rgba(12,166,120,.18);color:#5FE0B4;font-size:10px">微</div>
+                微信支付 · 09:38
+              </div>
+              <div class="noti-text">
+                微信支付<br>
+                <span class="chip chip-brand">¥25.00</span> 支付成功<br>
+                <span class="chip chip-green">瑞幸咖啡(国贸店)</span>
+              </div>
+            </div>
+
+            <div class="tagline">
+              <span class="tag"><i class="dot" style="background:#3B5BDB"></i>金额 25.00</span>
+              <span class="tag"><i class="dot" style="background:#0CA678"></i>商户 瑞幸咖啡</span>
+              <span class="tag" style="color:#9AA1AE"><i class="dot" style="background:rgba(255,255,255,.14)"></i>时间 用通知时间</span>
+            </div>
+
+            <div class="sec">还可以补充</div>
+            <div class="fieldrow" style="margin-top:0">
+              <div class="val"><span class="lbl">收支方向</span><span style="color:#067A57;font-weight:600">支出</span></div>
+              <span class="badge b-on" style="font-size:9px">已自动判断</span>
+            </div>
+            <div class="fieldrow">
+              <div class="val"><span class="lbl">记到账户</span>微信零钱</div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+            </div>
+            <div class="fieldrow">
+              <div class="val"><span class="lbl">默认分类</span>餐饮</div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+            </div>
+
+            <div class="bottom-cta">
+              <div class="cta-2">
+                <div class="btn-ghost">上一步</div>
+                <div class="btn-primary">下一步</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">07</span><span class="name">规则向导 · 点选字段</span></div>
+        <p>整个产品最关键的界面。用户只需要点一下那个金额、划一下那个店名。点完之后系统自动把「固定的字」和「会变的部分」区分开——但界面上只有彩色标签，不出现任何规则语法。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 08 向导 - 测试 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+              <h3 style="font-size:15px">新建规则</h3>
+              <span style="font-size:11px;color:#9AA1AE">7 / 8</span>
+            </div>
+
+            <div class="steps">
+              <i class="done"></i><i class="done"></i><i class="done"></i>
+              <i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i></i>
+            </div>
+
+            <div style="font-size:15px;font-weight:700;letter-spacing:-.2px;margin-bottom:5px">试一下，看准不准</div>
+            <div class="hint" style="margin-top:0;margin-bottom:12px">用几条最近收到的通知试跑，全部通过才能保存。</div>
+
+            <div class="tres">
+              <div class="mark m-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 6.5"/></svg></div>
+              <div class="body">
+                <div class="res" style="color:#067A57">匹配成功</div>
+                <div class="line"><b>¥25.00</b> · 瑞幸咖啡(国贸店) · 支出 · 微信零钱</div>
+              </div>
+            </div>
+
+            <div class="tres">
+              <div class="mark m-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 6.5"/></svg></div>
+              <div class="body">
+                <div class="res" style="color:#067A57">匹配成功</div>
+                <div class="line"><b>¥18.50</b> · 星巴克(朝阳大悦城) · 支出 · 微信零钱</div>
+              </div>
+            </div>
+
+            <div class="tres">
+              <div class="mark m-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+              <div class="body">
+                <div class="res" style="color:#C92A2A">没有匹配</div>
+                <div class="line">这条里找不到金额。它看起来是<b>活动/优惠通知</b>，本来就不该记账，可以不管。</div>
+              </div>
+            </div>
+
+            <div class="card" style="background:rgba(194,118,10,.12);border:1px solid rgba(194,118,10,.26);box-shadow:none;margin-top:12px">
+              <div style="font-size:11.5px;font-weight:700;color:#8A5205;margin-bottom:5px">这条不匹配是正常的</div>
+              <div style="font-size:11px;color:#7A4E0B;line-height:1.7">系统已经把它判定为噪音通知，会和其他活动推送一起自动过滤掉，不影响规则生效。</div>
+            </div>
+
+            <div class="sec">自动加入的过滤词</div>
+            <div class="tagline" style="margin-top:0">
+              <span class="tag">限时</span><span class="tag">满减</span><span class="tag">优惠券</span>
+              <span class="tag">活动</span><span class="tag">红包</span>
+            </div>
+
+            <div class="bottom-cta">
+              <div class="cta-2">
+                <div class="btn-ghost">上一步</div>
+                <div class="btn-primary">保存并开始观察</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">08</span><span class="name">规则向导 · 测试验证</span></div>
+        <p>强制测试环节，防止配出永远匹配不上的规则。不匹配时要解释清楚「为什么不匹配」，而不是丢一个报错——上面这条就把「活动通知本来就该被过滤」讲明白了。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 09 待确认箱 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <h3>待确认 <span style="color:#C2760A">3</span></h3>
+              <div class="nav-r">
+                <span style="font-size:11.5px;color:#3B5BDB;font-weight:600">批量处理</span>
+              </div>
+            </div>
+
+            <div class="banner" style="margin-top:2px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16v.1"/></svg>
+              <span>通用规则猜的，不确定，所以没直接入账。</span>
+            </div>
+
+            <div class="pend">
+              <div class="pend-hd">
+                <div class="ic sm" style="background:#2A2F3A;color:#E9ECF2;font-size:10px">抖</div>
+                <span class="app">抖音 · 18:42</span>
+                <span class="badge b-watch" style="margin-left:auto;font-size:9px">通用规则</span>
+              </div>
+              <div class="pend-raw">支付成功 ￥30.00，订单已提交</div>
+              <div class="extract">
+                <span class="ex ok">金额 30.00</span>
+                <span class="ex warn">商户 未识别</span>
+                <span class="ex">支出</span>
+              </div>
+              <div class="pend-act">
+                <div class="mini">判为噪音</div>
+                <div class="mini">修改</div>
+                <div class="mini primary">确认入账</div>
+              </div>
+            </div>
+
+            <div class="pend">
+              <div class="pend-hd">
+                <div class="ic sm" style="background:rgba(224,49,49,.18);color:#FF8787;font-size:10px">拼</div>
+                <span class="app">拼多多 · 12:05</span>
+                <span class="badge b-watch" style="margin-left:auto;font-size:9px">通用规则</span>
+              </div>
+              <div class="pend-raw">你已成功支付 ¥58.90</div>
+              <div class="extract">
+                <span class="ex ok">金额 58.90</span>
+                <span class="ex warn">商户 未识别</span>
+                <span class="ex">支出</span>
+              </div>
+              <div class="pend-act">
+                <div class="mini">判为噪音</div>
+                <div class="mini">修改</div>
+                <div class="mini primary">确认入账</div>
+              </div>
+            </div>
+
+            <div class="pend" style="margin-top:10px">
+              <div class="pend-hd">
+                <div class="ic sm" style="background:rgba(245,140,0,.18);color:#FFB454;font-size:10px">美</div>
+                <span class="app">美团外卖 · 11:30</span>
+                <span class="badge b-info" style="margin-left:auto;font-size:9px">规则观察中</span>
+              </div>
+              <div class="pend-raw">您的订单已支付 ￥33.00，骑手正在赶来</div>
+              <div class="extract">
+                <span class="ex ok">金额 33.00</span>
+                <span class="ex ok">商户 美团外卖</span>
+                <span class="ex">支出</span>
+              </div>
+              <div class="pend-act">
+                <div class="mini">判为噪音</div>
+                <div class="mini">修改</div>
+                <div class="mini primary">确认入账</div>
+              </div>
+            </div>
+
+            <div style="text-align:center;padding:4px 0 10px">
+              <span style="font-size:11px;color:#3B5BDB;font-weight:600">规则不准？去管理解析规则 ›</span>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>账单</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3.2"/><path d="M15.5 12.5h2.2"/></svg><span>资产</span></div>
+            <div class="tab on"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><i class="bdg">3</i></span><span>待确认</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19V11M12 19V5M18 19v-5"/></svg><span>统计</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h5M13 8h7M4 16h9M17 16h3"/><circle cx="11" cy="8" r="2.1"/><circle cx="15" cy="16" r="2.1"/></svg><span>设置</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">09</span><span class="name">待确认箱（Tab）</span></div>
+        <p>现在是底部第三个 Tab，图标带数量角标。低置信度的通知全部落这里，不直接进账单。卡片里露出通知原文与抽取结果对照，没识别出来的项标黄。底部给了「管理解析规则」的浅入口，不用绕去设置。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 10 解析日志 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <h3 style="font-size:16px">解析日志</h3>
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></div>
+            </div>
+
+            <div class="filters">
+              <div class="fl on">全部</div>
+              <div class="fl">已入账</div>
+              <div class="fl">待确认</div>
+              <div class="fl">已拦截</div>
+            </div>
+
+            <div class="log">
+              <span class="lt">18:42</span>
+              <div class="lc">
+                <div class="l1">抖音 · 支付成功 ￥30.00</div>
+                <div class="l2">通用规则命中 → <em>待确认</em></div>
+              </div>
+            </div>
+            <div class="log">
+              <span class="lt">18:20</span>
+              <div class="lc">
+                <div class="l1">微信支付 · 支付成功 ¥25.00</div>
+                <div class="l2">微信支付规则 → 已入账 · 餐饮 -25.00</div>
+              </div>
+            </div>
+            <div class="log">
+              <span class="lt">17:55</span>
+              <div class="lc">
+                <div class="l1">抖音 · 限时活动！满 100 减 20</div>
+                <div class="l2">已拦截 → <em>L1 命中噪音词「活动」</em></div>
+              </div>
+            </div>
+            <div class="log">
+              <span class="lt">16:31</span>
+              <div class="lc">
+                <div class="l1">支付宝 · 你有一张会员红包待领取</div>
+                <div class="l2">已拦截 → <em>L1 命中噪音词「红包」</em></div>
+              </div>
+            </div>
+            <div class="log">
+              <span class="lt">15:08</span>
+              <div class="lc">
+                <div class="l1">微信支付 · 支付成功 ¥25.00，已为你节省 5 元优惠券</div>
+                <div class="l2">微信支付规则 → 已入账（含噪音词但识别到支付成功，正常放行）</div>
+              </div>
+            </div>
+            <div class="log">
+              <span class="lt">14:12</span>
+              <div class="lc">
+                <div class="l1">抖音 · 你的快递已发出</div>
+                <div class="l2">已拦截 → <em>L3 未找到金额</em></div>
+              </div>
+            </div>
+            <div class="log">
+              <span class="lt">11:30</span>
+              <div class="lc">
+                <div class="l1">美团 · 您的订单已支付 ￥33.00</div>
+                <div class="l2">美团外卖规则（观察中）→ 待确认</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">10</span><span class="name">解析日志</span></div>
+        <p>透明化是这 App 敢自动记账的前提。每条通知都能查「为什么记了 / 为什么没记」，包括被哪一层过滤规则拦下的。第 5 条特意展示「带优惠券字样但正常入账」，说明豁免逻辑是生效的。入口在待确认 Tab 的底部，不用绕到设置。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 11 待确认空态 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <h3>待确认</h3>
+            </div>
+
+            <div style="text-align:center;padding:10px 0 4px">
+              <div class="okmark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 6.5"/></svg>
+              </div>
+              <div style="font-size:14.5px;font-weight:600;margin-top:11px;letter-spacing:-.2px">都处理完了</div>
+              <div class="muted" style="margin-top:5px">自动记账正常工作中</div>
+            </div>
+
+            <div class="card" style="margin-top:14px;padding:14px 10px">
+              <div style="font-size:10.5px;color:#9AA1AE;text-align:center;margin-bottom:12px">最近 7 天解析情况</div>
+              <div style="display:flex;align-items:center">
+                <div style="flex:1;text-align:center">
+                  <div style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px">42</div>
+                  <div class="muted" style="margin-top:2px">自动入账</div>
+                </div>
+                <div style="width:1px;height:26px;background:var(--line)"></div>
+                <div style="flex:1;text-align:center">
+                  <div style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px;color:#8A91A0">18</div>
+                  <div class="muted" style="margin-top:2px">已拦噪音</div>
+                </div>
+                <div style="width:1px;height:26px;background:var(--line)"></div>
+                <div style="flex:1;text-align:center">
+                  <div style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px;color:#12B886">0</div>
+                  <div class="muted" style="margin-top:2px">待确认</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sec">最近被拦下的通知</div>
+            <div class="listcard" style="margin-top:0;padding:2px 14px">
+              <div class="row">
+                <div class="ic" style="background:#2A2F3A;color:#E9ECF2">抖</div>
+                <div class="grow">
+                  <div class="t1">限时活动！满 100 减 20</div>
+                  <div class="t2">命中噪音词「活动」</div>
+                </div>
+                <div class="rgt muted">昨天</div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(26,99,216,.22);color:#7FAEFF">支</div>
+                <div class="grow">
+                  <div class="t1">你有一张会员红包待领取</div>
+                  <div class="t2">命中噪音词「红包」</div>
+                </div>
+                <div class="rgt muted">昨天</div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:#2A2F3A;color:#E9ECF2">抖</div>
+                <div class="grow">
+                  <div class="t1">你的快递已发出</div>
+                  <div class="t2">未找到金额</div>
+                </div>
+                <div class="rgt muted">周一</div>
+              </div>
+              <div class="row">
+                <div class="ic" style="background:rgba(224,49,49,.18);color:#FF8787">拼</div>
+                <div class="grow">
+                  <div class="t1">百亿补贴开抢，今日必买</div>
+                  <div class="t2">命中噪音词「百亿补贴」</div>
+                </div>
+                <div class="rgt muted">周一</div>
+              </div>
+            </div>
+
+            <div style="text-align:center;padding:10px 0 6px">
+              <span style="font-size:11px;color:#3B5BDB;font-weight:600">查看全部解析日志 ›</span>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>账单</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3.2"/><path d="M15.5 12.5h2.2"/></svg><span>资产</span></div>
+            <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><span>待确认</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19V11M12 19V5M18 19v-5"/></svg><span>统计</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h5M13 8h7M4 16h9M17 16h3"/><circle cx="11" cy="8" r="2.1"/><circle cx="15" cy="16" r="2.1"/></svg><span>设置</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">11</span><span class="name">待确认 · 空态</span></div>
+        <p>0 条时不做空白页。上半部分告诉你「最近 7 天自动记了 42 条、拦了 18 条」，让你能验证过滤规则还在正常工作；下半部分是被拦通知的摘要，点进去就是完整日志。这个 Tab 因此永远有内容可看，角标也在 0 时消失，不制造虚假紧迫感。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 12 记账浮悬提示 -->
+    <figure>
+      <div class="device">
+        <div class="screen" style="background:linear-gradient(168deg,#141A26 0%,#222B3E 46%,#39425A 100%)">
+          <div class="statusbar" style="color:#fff"><span>21:04</span><span class="sb-r" style="color:rgba(255,255,255,.6)">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg" style="padding:0 14px">
+            <div style="text-align:center;margin-top:18px;color:#fff">
+              <div style="font-size:10.5px;opacity:.5;letter-spacing:.08em">10 月 21 日 星期三</div>
+              <div style="font-size:44px;font-weight:300;letter-spacing:-2px;margin-top:2px;font-variant-numeric:tabular-nums">21:04</div>
+            </div>
+
+            <div class="noti-card">
+              <div style="display:flex;gap:9px;align-items:center">
+                <div class="ic sm" style="background:#3B5BDB;color:#fff;font-size:10px">记</div>
+                <span style="font-size:10.5px;color:#6B7280;font-weight:500">通知记账</span>
+                <span style="margin-left:auto;font-size:9.5px;color:#9AA1AE">刚刚</span>
+              </div>
+              <div style="font-size:14px;font-weight:700;margin-top:8px;letter-spacing:-.2px">已记账 ¥25.00</div>
+              <div style="font-size:11.5px;color:#5B6270;margin-top:3px">瑞幸咖啡(国贸店) · 餐饮 · 微信零钱</div>
+              <div style="display:flex;gap:7px;margin-top:10px">
+                <div class="mini primary" style="height:28px">查看账单</div>
+                <div class="mini" style="height:28px">撤销</div>
+              </div>
+            </div>
+
+            <div class="noti-card">
+              <div style="display:flex;gap:9px;align-items:center">
+                <div class="ic sm" style="background:#3B5BDB;color:#fff;font-size:10px">记</div>
+                <span style="font-size:10.5px;color:#6B7280;font-weight:500">通知记账</span>
+                <span style="margin-left:auto;font-size:9.5px;color:#9AA1AE">刚刚</span>
+              </div>
+              <div style="font-size:14px;font-weight:700;margin-top:8px;letter-spacing:-.2px">有一笔待确认 ¥30.00</div>
+              <div style="font-size:11.5px;color:#5B6270;margin-top:3px">抖音 · 商户没认出来，点一下确认</div>
+              <div style="display:flex;gap:7px;margin-top:10px">
+                <div class="mini primary" style="height:28px;background:#C2760A">确认入账</div>
+                <div class="mini" style="height:28px">查看原文</div>
+              </div>
+            </div>
+
+            <div style="text-align:center;color:rgba(255,255,255,.38);font-size:10px;margin-top:14px;line-height:1.7">
+              这两条是系统横幅，浮在其他 App 上层<br>不是你打开记账 App 才看到的
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">12</span><span class="name">记账浮悬提示</span></div>
+        <p>你在微信里付完钱，横幅就浮在屏幕上——因为你当时不在记账 App 里，应用内提示等于没有。用系统通知的 heads-up 实现，不申请悬浮窗权限。上条是自动入账，带「撤销」；下条是待确认，可直接确认不必打开 App。</p>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============ 第三组 ============ -->
+<section class="group" id="g3">
+  <h2>数据安全 <span>2 屏</span></h2>
+  <div class="canvas">
+
+    <!-- 11 回收站 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg">
+            <div class="nav">
+              <div class="icobtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <h3 style="font-size:16px">回收站</h3>
+              <span style="font-size:11.5px;color:#3B5BDB;font-weight:600">设置</span>
+            </div>
+
+            <div class="banner">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 16v.1"/></svg>
+              <span>删除的账单先放这里，保留 <b>7 天</b>后自动彻底删除。期间随时可以恢复。</span>
+            </div>
+
+            <div class="sec" style="margin-top:0">3 条记录</div>
+
+            <div class="trash">
+              <div class="trash-hd">
+                <div class="ic" style="background:rgba(224,49,49,.18);color:#FF8787">餐</div>
+                <div class="grow">
+                  <div class="t1">瑞幸咖啡(国贸店)</div>
+                  <div class="t2">10-19 09:38 · 餐饮 · 微信零钱</div>
+                </div>
+                <div class="rgt">
+                  <div class="amt exp">-25.00</div>
+                  <div class="countdown" style="margin-top:4px">还剩 5 天</div>
+                </div>
+              </div>
+              <div class="trash-act">
+                <div>恢复</div>
+                <div class="danger">彻底删除</div>
+              </div>
+            </div>
+
+            <div class="trash">
+              <div class="trash-hd">
+                <div class="ic" style="background:rgba(34,139,230,.18);color:#74B8F5">交</div>
+                <div class="grow">
+                  <div class="t1">滴滴出行</div>
+                  <div class="t2">10-18 21:10 · 交通 · 支付宝</div>
+                </div>
+                <div class="rgt">
+                  <div class="amt exp">-18.60</div>
+                  <div class="countdown" style="margin-top:4px">还剩 4 天</div>
+                </div>
+              </div>
+              <div class="trash-act">
+                <div>恢复</div>
+                <div class="danger">彻底删除</div>
+              </div>
+            </div>
+
+            <div class="trash">
+              <div class="trash-hd">
+                <div class="ic" style="background:rgba(112,112,190,.22);color:#B4B4F0">调</div>
+                <div class="grow">
+                  <div class="t1">余额调整</div>
+                  <div class="t2">10-15 10:00 · 招商银行</div>
+                </div>
+                <div class="rgt">
+                  <div class="amt" style="color:#9AA1AE">-22.00</div>
+                  <div class="countdown" style="margin-top:4px;color:#9AA1AE;background:var(--line)">还剩 1 天</div>
+                </div>
+              </div>
+              <div class="trash-act">
+                <div>恢复</div>
+                <div class="danger">彻底删除</div>
+              </div>
+            </div>
+
+            <div style="text-align:center;font-size:11.5px;color:#C92A2A;font-weight:600;padding:14px 0">清空回收站</div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">13</span><span class="name">回收站</span></div>
+        <p>每条都显示「还剩 N 天」，天数快到时标签转灰，制造紧迫感但不吓人。恢复按钮比彻底删除更显眼——误删是常事，永久删除不该那么顺手。</p>
+      </figcaption>
+    </figure>
+
+    <!-- 12 设置 -->
+    <figure>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><span class="sb-r">5G&nbsp;&nbsp;87%</span></div>
+          <div class="pg compact">
+            <div class="nav">
+              <h3>设置</h3>
+            </div>
+
+            <div class="sec" style="margin-top:0">通知与解析</div>
+            <div class="setgrp">
+              <div class="set">
+                <div class="ico" style="background:rgba(12,166,120,.18);color:#5FE0B4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg></div>
+                <span class="grow">通知使用权</span>
+                <span class="rv" style="color:#067A57;font-weight:600"><i class="dot" style="background:#0CA678"></i>已开启</span>
+              </div>
+              <div class="set">
+                <div class="ico" style="background:rgba(91,119,255,.18);color:#9AAEFF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg></div>
+                <span class="grow">白名单</span>
+                <span class="rv">微信、支付宝等 4 个<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+              </div>
+              <div class="set">
+                <div class="ico" style="background:rgba(194,118,10,.20);color:#F0B860"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h9"/></svg></div>
+                <span class="grow">解析规则</span>
+                <span class="rv">5 条<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+              </div>
+              <div class="set">
+                <div class="ico" style="background:rgba(91,119,255,.18);color:#9AAEFF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg></div>
+                <span class="grow">记账提示</span>
+                <span class="rv">全部提示<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+              </div>
+            </div>
+
+            <div class="sec">数据</div>
+            <div class="setgrp">
+              <div class="set">
+                <div class="ico" style="background:rgba(26,99,216,.22);color:#7FAEFF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5"/><path d="M7.5 9.5L12 5l4.5 4.5"/><path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16"/></svg></div>
+                <span class="grow">立即备份</span>
+                <span class="rv">12.4 MB · 3 天前</span>
+              </div>
+              <div class="set">
+                <div class="ico" style="background:rgba(26,99,216,.22);color:#7FAEFF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.5V12l3 2"/></svg></div>
+                <span class="grow">自动备份</span>
+                <div class="sw-t"><i></i></div>
+              </div>
+              <div class="set" style="padding-left:51px">
+                <span class="grow" style="font-weight:400;color:#5B6270">备份周期</span>
+                <span class="rv">7 天<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+              </div>
+              <div class="set">
+                <div class="ico" style="background:rgba(12,166,120,.18);color:#5FE0B4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16"/></svg></div>
+                <span class="grow">导入账单</span>
+                <span class="rv">微信 / 支付宝<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+              </div>
+            </div>
+
+            <div class="sec">其他</div>
+            <div class="setgrp">
+              <div class="set">
+                <div class="ico" style="background:rgba(194,118,10,.20);color:#F0B860"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11.5H6.2L5 8z"/><path d="M9.5 8V6.2a2.5 2.5 0 0 1 5 0V8"/></svg></div>
+                <span class="grow">回收站保留</span>
+                <span class="rv">7 天<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+              </div>
+              <div class="set">
+                <div class="ico" style="background:rgba(112,112,190,.22);color:#B4B4F0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg></div>
+                <span class="grow">深色模式</span>
+                <span class="rv">跟随系统<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+              </div>
+            </div>
+
+            <div style="text-align:center;padding:6px 0 0">
+              <div style="font-size:11px;color:#9AA1AE">通知记账 v1.0</div>
+              <div style="font-size:10px;color:#B4BAC5;margin-top:4px">本应用不联网，数据只存在这台手机上</div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span>账单</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3.2"/><path d="M15.5 12.5h2.2"/></svg><span>资产</span></div>
+            <div class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg><i class="bdg">3</i></span><span>待确认</span></div>
+            <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19V11M12 19V5M18 19v-5"/></svg><span>统计</span></div>
+            <div class="tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h5M13 8h7M4 16h9M17 16h3"/><circle cx="11" cy="8" r="2.1"/><circle cx="15" cy="16" r="2.1"/></svg><span>设置</span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="cap-hd"><span class="num">14</span><span class="name">设置</span></div>
+        <p>三组：通知与解析、数据、其他。备份相关三项挨在一起（立即备份 / 自动备份 / 周期），和你的需求顺序对齐。底部写明「不联网」，作为持续的心理保障。</p>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ============ 决策 ============ -->
+<section class="decisions" id="decisions">
+  <h2>已确认的设计决策</h2>
+  <p class="sub">下面六项已经按你的意见定稿，实现时不再改动。</p>
+  <ol>
+    <li>
+      <div>
+        <div class="dt">主色：靛蓝 #3B5BDB</div>
+        <div class="dd">避开红绿（红绿已经占给支出/收入），支出 #E03131、收入 #0CA678、提醒 #C2760A。</div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <div class="dt">首页首屏：本月支出</div>
+        <div class="dd">净资产放在「资产」Tab。打开 App 多数时候是在看这个月花了多少，净资产变化慢，看一次就够。</div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <div class="dt">规则向导：保持 8 步</div>
+        <div class="dd">不压缩。配置是一次性动作，慢一点但不容易配错，比每屏塞满信息更适合小白。</div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <div class="dt">导航：5 个 Tab，待确认独立</div>
+        <div class="dd">顺序 <b>账单 / 资产 / 待确认 / 统计 / 设置</b>。设置保留为第五个 Tab 而不是藏进右上角——因为里面装着「通知使用权状态」，服务被杀后需要随时能查。待确认用角标提示，0 条时不显示角标。</div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <div class="dt">解析日志：对用户开放</div>
+        <div class="dd">入口放在待确认 Tab 的空态与底部，不绕设置。透明度换取信任——能查「它到底记了些啥」，才敢让它自动记账。</div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <div class="dt">记账浮悬提示：用系统横幅，不要悬浮窗</div>
+        <div class="dd">付款时人不在这个 App 里，应用内提示等于没有。用通知的 heads-up 横幅实现，不申请 <code>SYSTEM_ALERT_WINDOW</code>。三档开关：全部提示 / 仅成功入账 / 不提示。</div>
+      </div>
+    </li>
+  </ol>
+</section>
+
+</body>
+</html>
