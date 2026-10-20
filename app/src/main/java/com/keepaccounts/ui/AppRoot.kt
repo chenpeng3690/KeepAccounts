@@ -1,9 +1,15 @@
 package com.keepaccounts.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.InsertChart
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -13,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -24,7 +31,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.keepaccounts.core.AppContainer
-import com.keepaccounts.ui.component.TabIcon
 import com.keepaccounts.ui.screen.PendingScreen
 import com.keepaccounts.ui.screen.StatsScreen
 import com.keepaccounts.ui.screen.assets.AccountDetailScreen
@@ -44,13 +50,14 @@ import com.keepaccounts.ui.screen.trash.TrashScreen
  */
 enum class KaTab(
     val route: String,
-    val label: String
+    val label: String,
+    val icon: ImageVector
 ) {
-    Ledger("ledger", "账单"),
-    Assets("assets", "资产"),
-    Pending("pending", "待确认"),
-    Stats("stats", "统计"),
-    Settings("settings", "设置")
+    Ledger("ledger", "账单", Icons.Outlined.ReceiptLong),
+    Assets("assets", "资产", Icons.Outlined.AccountBalanceWallet),
+    Pending("pending", "待确认", Icons.Outlined.NotificationsActive),
+    Stats("stats", "统计", Icons.Outlined.InsertChart),
+    Settings("settings", "设置", Icons.Outlined.Settings)
 }
 
 /** 二级页面的路由，不进底部导航 */
@@ -117,7 +124,7 @@ fun AppRoot(container: AppContainer) {
                                         }
                                     }
                                 ) {
-                                    TabIcon(tab = tab, tint = LocalContentColor.current)
+                                    Icon(imageVector = tab.icon, contentDescription = tab.label)
                                 }
                             },
                             label = {

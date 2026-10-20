@@ -32,7 +32,7 @@
 | 构建 | AGP 8.5.2 / Gradle 8.7 / JDK 17 | |
 | 后台任务 | WorkManager | 回收站每日清理、自动备份（默认关闭，周期 1/3/7/30 天） |
 | SDK | minSdk 29、targetSdk 34 | minSdk 29 是 `MediaStore.Downloads` 免权限写公共目录的前提 |
-| 图标 | 手绘 Canvas + material-icons-core | 导航图标自绘；只依赖 core 里的 Add / Search / Close / ArrowBack。**不引 material-icons-extended**：该 artifact 没有发布 1.7.5（只有 1.6.8 / 1.7.0 / 1.7.2 / 1.7.8），与 BOM 2024.10.01 的 1.7.5 对不上会直接解析失败 |
+| 图标 | material-icons-extended **1.7.8**（显式钉版本） | 该 artifact 从未发布 1.7.5，而 BOM 2024.10.01 恰好指向 1.7.5，因此用 `resolutionStrategy.force` 钉到 1.7.8，同时把 icons-core 一起对齐 |
 
 ---
 
