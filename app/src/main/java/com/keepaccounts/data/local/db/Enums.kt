@@ -63,6 +63,8 @@ object RuleState {
 
 /** 通知的解析结果 */
 object ParseStatus {
+    /** 已采集但还没解析（第 5 步的状态） */
+    const val CAPTURED = "captured"
     /** 成功生成账单 */
     const val MATCHED = "matched"
     /** 命中但置信度不足，进了待确认箱 */
@@ -89,4 +91,8 @@ object SettingKeys {
     const val AUTO_BACKUP_INTERVAL_DAYS = "auto_backup_interval_days"
     /** 记账提示档位：all / success_only / off */
     const val FEEDBACK_LEVEL = "feedback_level"
+    /** 白名单包名，逗号分隔 */
+    const val WHITELIST = "whitelist_packages"
+    /** 收录全部通知（true 时不再看白名单） */
+    const val CAPTURE_ALL = "capture_all_apps"
 }

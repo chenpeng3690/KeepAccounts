@@ -37,6 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepaccounts.data.backup.BackupPreview
 import com.keepaccounts.data.backup.RestoreMode
@@ -45,6 +47,7 @@ import com.keepaccounts.ui.component.ScreenHeader
 import com.keepaccounts.ui.component.SectionLabel
 import com.keepaccounts.ui.kaViewModel
 import com.keepaccounts.ui.theme.TabularNumbers
+import com.keepaccounts.notification.NotificationAccess
 import com.keepaccounts.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -52,11 +55,23 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun SettingsScreen(onOpenTrash: () -> Unit) {
+fun SettingsScreen(
+    onOpenTrash: () -> Unit,
+    onOpenWhitelist: () -> Unit,
+    onOpenRawEvents: () -> Unit
+) {
     val context = LocalContext.current
     val vm = kaViewModel { SettingsViewModel(it, context.applicationContext) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val rawCount by vm.rawEventCount.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+
+    // 授权状态与白名单都可能在系统设置/子页面里被改动，回到本页时重新读一次
+    var granted by remember { mutableStateOf(NotificationAccess.isGranted(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        granted = NotificationAccess.isGranted(context)
+        vm.refreshWhitelistSnapshot()
+    }
 
     var pendingPassword by remember { mutableStateOf<String?>(null) }
     var showBackupPassword by remember { mutableStateOf(false) }
@@ -126,10 +141,19 @@ fun SettingsScreen(onOpenTrash: () -> Unit) {
         SettingGroup {
             SettingRow(
                 title = "通知使用权",
-                value = "未开启 · 第 5 步接上",
-                enabled = false
+                value = if (granted) "已开启" else "未开启，去授权",
+                onClick = { NotificationAccess.openListenerSettings(context) }
             )
-            SettingRow(title = "应用白名单", value = "第 5 步接上", enabled = false)
+            SettingRow(
+                title = "应用白名单",
+                value = if (state.whitelist.size > 1) "${state.whitelist.size} 个应用" else "0 个应用",
+                onClick = onOpenWhitelist
+            )
+            SettingRow(
+                title = "原始通知",
+                value = "${rawCount} 条样本",
+                onClick = onOpenRawEvents
+            )
             SettingRow(title = "解析规则", value = "第 6 步接上", enabled = false)
         }
 

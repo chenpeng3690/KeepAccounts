@@ -8,6 +8,7 @@ import com.keepaccounts.data.repo.AccountRepository
 import com.keepaccounts.data.repo.CategoryRepository
 import com.keepaccounts.data.backup.BackupRepository
 import com.keepaccounts.data.repo.SettingsRepository
+import com.keepaccounts.notification.NotificationGate
 import com.keepaccounts.data.repo.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,8 @@ class AppContainer(context: Context) {
     fun bootstrap() {
         applicationScope.launch {
             runCatching { SeedData.ensure(db) }
+            // 白名单常驻内存，启动时先灌一次，监听服务才能零延迟判断
+            runCatching { NotificationGate.refresh(settingsRepo) }
         }
     }
 }

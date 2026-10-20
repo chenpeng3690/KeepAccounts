@@ -27,6 +27,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.keepaccounts.notification.NotificationAccess
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +68,13 @@ fun LedgerScreen(
 ) {
     val vm = kaViewModel { LedgerViewModel(it) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // 通知使用权可能在系统设置里被关掉，服务会静默失效，所以每次回到页面都重新确认
+    var accessGranted by remember { mutableStateOf(NotificationAccess.isGranted(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        accessGranted = NotificationAccess.isGranted(context)
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -84,6 +99,11 @@ fun LedgerScreen(
                 NavIconButton(Icons.Outlined.Search, "搜索", onOpenSearch)
                 Spacer(Modifier.width(8.dp))
                 NavIconButton(Icons.Outlined.FilterList, "筛选", onOpenSearch)
+            }
+
+            if (!accessGranted) {
+                AccessBanner { NotificationAccess.openListenerSettings(context) }
+                Spacer(Modifier.height(10.dp))
             }
 
             MonthSummaryCard(expense = state.monthExpense, income = state.monthIncome)
@@ -113,6 +133,35 @@ fun LedgerScreen(
             shape = CircleShape
         ) {
             Icon(Icons.Filled.Add, contentDescription = "记一笔")
+        }
+    }
+}
+
+/** 通知读取被关闭时的常驻提示。服务被系统杀掉后 App 会静默失效，必须一眼看到 */
+@Composable
+private fun AccessBanner(onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xFFFDECEC)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "通知读取已关闭，自动记账已停止",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFFC92A2A),
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "去开启",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFFC92A2A),
+                modifier = Modifier.clickable(onClick = onClick)
+            )
         }
     }
 }

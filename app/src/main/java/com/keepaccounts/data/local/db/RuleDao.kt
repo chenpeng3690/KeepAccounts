@@ -69,6 +69,19 @@ interface RawEventDao {
     @Query("SELECT COUNT(*) FROM raw_events WHERE parse_status = :status AND received_at >= :since")
     suspend fun countByStatusSince(status: String, since: Long): Int
 
+    /** 同一条通知可能被系统重复投递，用「同包名 + 同标题 + 同正文 + 时间窗」判重 */
+    @Query(
+        """
+        SELECT COUNT(*) FROM raw_events
+        WHERE package_name = :packageName AND title = :title AND text = :text
+          AND received_at >= :since
+        """
+    )
+    suspend fun countSimilar(packageName: String, title: String?, text: String, since: Long): Int
+
+    @Query("SELECT COUNT(*) FROM raw_events WHERE parse_status = :status")
+    fun observeCount(status: String): Flow<Int>
+
     @Query("SELECT MAX(received_at) FROM raw_events")
     suspend fun lastReceivedAt(): Long?
 

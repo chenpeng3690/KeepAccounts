@@ -11,9 +11,12 @@ import com.keepaccounts.data.backup.RestoreReport
 import com.keepaccounts.data.local.db.BackupTrigger
 import com.keepaccounts.data.local.db.BackupHistoryEntity
 import com.keepaccounts.data.local.db.SettingKeys
+import com.keepaccounts.notification.NotificationGate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class SettingsUiState(
@@ -21,6 +24,7 @@ data class SettingsUiState(
     val autoBackupEnabled: Boolean = false,
     val autoBackupIntervalDays: Int = 7,
     val lastBackupAt: Long? = null,
+    val whitelist: Set<String> = emptySet(),
     val busy: Boolean = false,
     val message: String? = null,
     val loaded: Boolean = false
@@ -34,6 +38,11 @@ class SettingsViewModel(
     private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
+    /** 已采集但未解析的通知条数，设置页用来提示"攒了多少样本" */
+    val rawEventCount: StateFlow<Int> = container.db.rawEventDao()
+        .observeCount(com.keepaccounts.data.local.db.ParseStatus.CAPTURED)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
     init {
         viewModelScope.launch {
             val retention = container.settingsRepo.recycleRetentionDays()
@@ -45,9 +54,15 @@ class SettingsViewModel(
                 autoBackupEnabled = enabled,
                 autoBackupIntervalDays = interval,
                 lastBackupAt = last,
+                whitelist = NotificationGate.snapshot(),
                 loaded = true
             )
         }
+    }
+
+    /** 从白名单页返回后刷新内存快照的展示值 */
+    fun refreshWhitelistSnapshot() {
+        _state.value = _state.value.copy(whitelist = NotificationGate.snapshot())
     }
 
     fun clearMessage() {

@@ -38,9 +38,11 @@ import com.keepaccounts.ui.screen.assets.AssetsScreen
 import com.keepaccounts.ui.screen.category.CategoryManageScreen
 import com.keepaccounts.ui.screen.entry.EntryScreen
 import com.keepaccounts.ui.screen.ledger.LedgerScreen
+import com.keepaccounts.ui.screen.raw.RawEventsScreen
 import com.keepaccounts.ui.screen.search.SearchScreen
 import com.keepaccounts.ui.screen.settings.SettingsScreen
 import com.keepaccounts.ui.screen.trash.TrashScreen
+import com.keepaccounts.ui.screen.whitelist.WhitelistScreen
 
 /**
  * 底部导航固定 5 个，顺序不能改：账单 / 资产 / 待确认 / 统计 / 设置。
@@ -67,6 +69,8 @@ object KaRoute {
     const val SEARCH = "search"
     const val CATEGORIES = "categories"
     const val TRASH = "trash"
+    const val WHITELIST = "whitelist"
+    const val RAW_EVENTS = "raw_events"
 
     fun accountDetail(id: Long) = "account/$id"
 
@@ -168,7 +172,19 @@ fun AppRoot(container: AppContainer) {
             composable(KaTab.Pending.route) { PendingScreen(container) }
             composable(KaTab.Stats.route) { StatsScreen(container) }
             composable(KaTab.Settings.route) {
-                SettingsScreen(onOpenTrash = { navController.navigate(KaRoute.TRASH) })
+                SettingsScreen(
+                    onOpenTrash = { navController.navigate(KaRoute.TRASH) },
+                    onOpenWhitelist = { navController.navigate(KaRoute.WHITELIST) },
+                    onOpenRawEvents = { navController.navigate(KaRoute.RAW_EVENTS) }
+                )
+            }
+
+            composable(KaRoute.WHITELIST) {
+                WhitelistScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(KaRoute.RAW_EVENTS) {
+                RawEventsScreen(onBack = { navController.popBackStack() })
             }
 
             composable(
