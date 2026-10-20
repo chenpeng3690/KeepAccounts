@@ -12,6 +12,7 @@ import com.keepaccounts.util.Time
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 data class DayGroup(
@@ -28,18 +29,37 @@ data class LedgerUiState(
     val accounts: Map<Long, AccountEntity> = emptyMap(),
     val monthExpense: Long = 0,
     val monthIncome: Long = 0,
+    /** 本月总预算；没设预算时为 null，首页就不显示预算条 */
+    val budgetTotal: Long? = null,
     val loaded: Boolean = false
 )
 
 class LedgerViewModel(container: AppContainer) : ViewModel() {
 
+    /** 本月总预算。预算模块在第 8 步落地，这里先把读取路径接好，没有数据就不显示预算条 */
+    private val monthBudget = container.db.budgetDao().observeEnabled()
+        .map { budgets ->
+            budgets.firstOrNull { it.scope == "total" && it.period == "month" && it.enabled }?.amount
+        }
+
+    private data class MonthFigures(
+        val expense: Long,
+        val income: Long,
+        val budget: Long?
+    )
+
+    private val monthFigures = combine(
+        container.txnRepo.observeMonthExpense(),
+        container.txnRepo.observeMonthIncome(),
+        monthBudget
+    ) { expense, income, budget -> MonthFigures(expense, income, budget) }
+
     val state: StateFlow<LedgerUiState> = combine(
         container.txnRepo.observeActive(),
         container.categoryRepo.observeAll(),
         container.accountRepo.observeActive(),
-        container.txnRepo.observeMonthExpense(),
-        container.txnRepo.observeMonthIncome()
-    ) { txns, categories, accounts, expense, income ->
+        monthFigures
+    ) { txns, categories, accounts, figures ->
         // 待确认的账单独待在「待确认」Tab 里，不混进账单列表
         val confirmed = txns.filter { it.status == TxStatus.CONFIRMED }
 
@@ -63,8 +83,9 @@ class LedgerViewModel(container: AppContainer) : ViewModel() {
             groups = groups,
             categories = categories.associateBy { it.id },
             accounts = accounts.associateBy { it.id },
-            monthExpense = expense,
-            monthIncome = income,
+            monthExpense = figures.expense,
+            monthIncome = figures.income,
+            budgetTotal = figures.budget,
             loaded = true
         )
     }.stateIn(

@@ -12,17 +12,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Backspace
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,10 +45,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.keepaccounts.data.local.db.CategoryEntity
 import com.keepaccounts.data.local.db.TxSource
 import com.keepaccounts.data.local.db.TxType
 import com.keepaccounts.data.repo.TxnDraft
 import com.keepaccounts.ui.kaViewModel
+import com.keepaccounts.ui.theme.CategoryIcons
 import com.keepaccounts.ui.theme.KaTheme
 import com.keepaccounts.ui.theme.TabularNumbers
 import com.keepaccounts.ui.viewmodel.EntryViewModel
@@ -53,6 +59,13 @@ import com.keepaccounts.util.Time
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+/**
+ * 记一笔 / 编辑账单。布局对齐 docs/ui-preview.html 第 02 屏：
+ * 标题栏 → 金额（右对齐大字）→ 4 列分类宫格 → 账户 / 时间 / 备注行 → 数字键盘 → 保存。
+ *
+ * 与设计稿的唯一增补是金额左侧的「支出 / 收入」切换：设计稿只画了支出态，
+ * 但没有收入入口这个 App 就没法用，所以压成两个小胶囊塞在金额左边。
+ */
 @Composable
 fun EntryScreen(
     txnId: Long?,
@@ -73,11 +86,12 @@ fun EntryScreen(
     var occurredAt by remember { mutableStateOf(System.currentTimeMillis()) }
     var note by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+
     var showCategoryPicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
+    var showNoteEditor by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    // 编辑模式：数据到达后回填一次
     LaunchedEffect(editing?.id) {
         editing?.let { t ->
             type = if (t.type == TxType.INCOME || t.type == TxType.REFUND) TxType.INCOME else t.type
@@ -88,7 +102,6 @@ fun EntryScreen(
             note = t.note.orEmpty()
         }
     }
-    // 新建时默认选中第一个账户
     LaunchedEffect(accounts, accountId) {
         if (accountId == null) accountId = accounts.firstOrNull()?.id
     }
@@ -97,138 +110,139 @@ fun EntryScreen(
         it.type == TxType.TRANSFER || it.source == TxSource.ADJUSTMENT
     } == true
 
-    val filteredCategories = categories.filter { it.type == type }
+    val filtered = categories.filter { it.type == type }
+    val amountColor = if (type == TxType.EXPENSE) KaTheme.extra.expense else KaTheme.extra.income
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        // --- 顶栏 ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp),
+                .padding(top = 8.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onClose) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "关闭",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
             Text(
                 text = if (vm.isEdit) "编辑账单" else "记一笔",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.weight(1f)
             )
             if (vm.isEdit) {
                 TextButton(onClick = { showDeleteConfirm = true }) {
                     Text(
                         text = "删除",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
             }
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(10.dp))
+                    .clickable(onClick = onClose),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "关闭",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
 
         if (isSpecial) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
             Text(
-                text = "转账和余额调整记录不能在记账页编辑",
+                text = "转账和余额调整不能在这里改",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "这两类记录涉及两个账户的余额对冲，直接在记账页改金额会让余额对不上。" +
+                text = "这两类记录同时影响两个账户的余额，在记账页改金额会让余额对不上。" +
                     "如需修改请删除后重新操作。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 20.sp
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(18.dp))
             TextButton(onClick = { showDeleteConfirm = true }) {
                 Text("删除这条记录", color = MaterialTheme.colorScheme.error)
             }
             return@Column
         }
 
-        // --- 收支切换 ---
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            TypePill(
-                text = "支出",
-                selected = type == TxType.EXPENSE,
-                modifier = Modifier.width(96.dp)
-            ) {
-                type = TxType.EXPENSE
-                categoryId = null
-            }
-            Spacer(Modifier.width(10.dp))
-            TypePill(
-                text = "收入",
-                selected = type == TxType.INCOME,
-                modifier = Modifier.width(96.dp)
-            ) {
-                type = TxType.INCOME
-                categoryId = null
-            }
-        }
-
-        // --- 金额 ---
-        Text(
-            text = if (amountText.isEmpty()) "0.00" else amountText,
-            style = MaterialTheme.typography.displaySmall.merge(TabularNumbers),
-            fontWeight = FontWeight.Bold,
-            color = if (type == TxType.EXPENSE) KaTheme.extra.expense else KaTheme.extra.income,
-            textAlign = TextAlign.End,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 18.dp)
-        )
-
-        // --- 中间信息区（可滚动，避免小屏被键盘挤没） ---
         Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-            val selectedCategory = filteredCategories.firstOrNull { it.id == categoryId }
-            InfoRow(
-                label = "分类",
-                value = selectedCategory?.name ?: "未分类",
-                onClick = { showCategoryPicker = true }
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TypeToggle(type = type) { next ->
+                    if (next != type) {
+                        type = next
+                        categoryId = null
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = "¥",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 5.dp, end = 3.dp)
+                    )
+                    Text(
+                        text = if (amountText.isEmpty()) "0.00" else amountText,
+                        style = MaterialTheme.typography.displaySmall.merge(TabularNumbers),
+                        fontWeight = FontWeight.Bold,
+                        color = amountColor,
+                        textAlign = TextAlign.End
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            CategoryGrid(
+                categories = filtered,
+                selectedId = categoryId,
+                onSelect = { categoryId = it },
+                onMore = { showCategoryPicker = true }
             )
-            InfoRow(
+
+            Spacer(Modifier.height(14.dp))
+            FieldRow(
                 label = "账户",
                 value = accounts.firstOrNull { it.id == accountId }?.name ?: "选择账户",
                 onClick = { showAccountPicker = true }
             )
-            InfoRow(
-                label = "日期",
-                value = Time.formatDate(occurredAt),
+            FieldRow(
+                label = "时间",
+                value = "${Time.dayLabel(occurredAt)} ${Time.formatTime(occurredAt)}",
                 onClick = {
                     val cal = Calendar.getInstance().apply { timeInMillis = occurredAt }
                     DatePickerDialog(
                         context,
                         { _, year, month, day ->
-                            val c = Calendar.getInstance().apply {
+                            val picked = Calendar.getInstance().apply {
                                 timeInMillis = occurredAt
                                 set(Calendar.YEAR, year)
                                 set(Calendar.MONTH, month)
                                 set(Calendar.DAY_OF_MONTH, day)
                             }
-                            occurredAt = c.timeInMillis
-                            error = null
+                            occurredAt = picked.timeInMillis
                         },
                         cal.get(Calendar.YEAR),
                         cal.get(Calendar.MONTH),
@@ -236,37 +250,26 @@ fun EntryScreen(
                     ).show()
                 }
             )
-            Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text("备注（选填）", style = MaterialTheme.typography.bodySmall)
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                textStyle = MaterialTheme.typography.bodyMedium
+            FieldRow(
+                label = "备注",
+                value = note.ifBlank { "添加备注" },
+                muted = note.isBlank(),
+                onClick = { showNoteEditor = true }
             )
+
             if (error != null) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
                     text = error.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
             }
+            Spacer(Modifier.height(8.dp))
         }
 
-        // --- 键盘 ---
-        Keypad(
-            onKey = { key ->
-                amountText = applyKey(amountText, key)
-                error = null
-            }
-        )
+        NumPad(onKey = { key -> amountText = applyKey(amountText, key); error = null })
 
-        // --- 保存 ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -280,7 +283,7 @@ fun EntryScreen(
                         cents == null || cents <= 0 -> error = "请输入金额"
                         acc == null -> error = "请选择账户"
                         else -> scope.launch {
-                            val message = vm.save(
+                            val result = vm.save(
                                 TxnDraft(
                                     type = type,
                                     amount = cents,
@@ -291,7 +294,7 @@ fun EntryScreen(
                                     source = editing?.source ?: TxSource.MANUAL
                                 )
                             )
-                            if (message == null) onClose() else error = message
+                            if (result == null) onClose() else error = result
                         }
                     }
                 }
@@ -309,7 +312,7 @@ fun EntryScreen(
 
     if (showCategoryPicker) {
         CategoryPickerSheet(
-            categories = filteredCategories,
+            categories = filtered,
             selectedId = categoryId,
             onSelect = { categoryId = it; showCategoryPicker = false },
             onManage = { showCategoryPicker = false; onManageCategories() },
@@ -326,17 +329,25 @@ fun EntryScreen(
         )
     }
 
+    if (showNoteEditor) {
+        NoteDialog(
+            initial = note,
+            onDismiss = { showNoteEditor = false },
+            onConfirm = { note = it; showNoteEditor = false }
+        )
+    }
+
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text("删除这笔账单？") },
-            text = { Text("删除后会进回收站，默认保留 7 天，期间可以恢复。") },
+            text = { Text("删除后进入回收站，默认保留 7 天，期间可以恢复。") },
             confirmButton = {
                 TextButton(onClick = {
                     scope.launch {
-                        val message = vm.delete()
+                        val result = vm.delete()
                         showDeleteConfirm = false
-                        if (message == null) onClose() else error = message
+                        if (result == null) onClose() else error = result
                     }
                 }) {
                     Text("删除", color = MaterialTheme.colorScheme.error)
@@ -349,27 +360,36 @@ fun EntryScreen(
     }
 }
 
+/* --------------------------- 组件 --------------------------- */
+
 @Composable
-private fun TypePill(
-    text: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
+private fun TypeToggle(type: String, onChange: (String) -> Unit) {
+    Row(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(11.dp))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        ToggleCell("支出", type == TxType.EXPENSE) { onChange(TxType.EXPENSE) }
+        ToggleCell("收入", type == TxType.INCOME) { onChange(TxType.INCOME) }
+    }
+}
+
+@Composable
+private fun ToggleCell(text: String, selected: Boolean, onClick: () -> Unit) {
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+        modifier = Modifier
+            .clip(RoundedCornerShape(9.dp))
             .background(
                 if (selected) MaterialTheme.colorScheme.primaryContainer
                 else MaterialTheme.colorScheme.surface
             )
             .clickable(onClick = onClick)
-            .padding(vertical = 9.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = if (selected) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurfaceVariant
@@ -377,47 +397,153 @@ private fun TypePill(
     }
 }
 
+/** 4 列宫格：前 7 个分类 + 一个「更多」入口 */
 @Composable
-private fun InfoRow(label: String, value: String, onClick: () -> Unit) {
+private fun CategoryGrid(
+    categories: List<CategoryEntity>,
+    selectedId: Long?,
+    onSelect: (Long) -> Unit,
+    onMore: () -> Unit
+) {
+    val shown = categories.take(7)
+    val firstRow = shown.take(4)
+    val secondRow = shown.drop(4)
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            firstRow.forEach { category ->
+                Box(Modifier.weight(1f)) {
+                    CategoryCell(
+                        name = category.name,
+                        iconKey = category.icon,
+                        selected = category.id == selectedId,
+                        onClick = { onSelect(category.id) }
+                    )
+                }
+            }
+            repeat(4 - firstRow.size) { Spacer(Modifier.weight(1f)) }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            secondRow.forEach { category ->
+                Box(Modifier.weight(1f)) {
+                    CategoryCell(
+                        name = category.name,
+                        iconKey = category.icon,
+                        selected = category.id == selectedId,
+                        onClick = { onSelect(category.id) }
+                    )
+                }
+            }
+            repeat(3 - secondRow.size) { Spacer(Modifier.weight(1f)) }
+            Box(Modifier.weight(1f)) {
+                CategoryCell(
+                    name = "更多",
+                    iconKey = null,
+                    selected = false,
+                    onClick = onMore
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryCell(
+    name: String,
+    iconKey: String?,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(42.dp),
+            shape = RoundedCornerShape(15.dp),
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.surface,
+            shadowElevation = if (selected) 0.dp else 1.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (iconKey == null) Icons.Outlined.Apps
+                    else CategoryIcons.of(iconKey),
+                    contentDescription = name,
+                    tint = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(19.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.5.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun FieldRow(
+    label: String,
+    value: String,
+    muted: Boolean = false,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .padding(top = 8.dp)
+            .clip(RoundedCornerShape(13.dp))
             .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (muted) FontWeight.Normal else FontWeight.Medium,
+            color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
         )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = "›",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        Spacer(Modifier.weight(1f))
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(14.dp)
         )
     }
-    Spacer(Modifier.height(8.dp))
 }
 
 @Composable
-private fun Keypad(onKey: (String) -> Unit) {
-    val keys = listOf(
-        "1", "2", "3",
-        "4", "5", "6",
-        "7", "8", "9",
-        ".", "0", "⌫"
-    )
+private fun NumPad(onKey: (String) -> Unit) {
+    val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫")
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -430,22 +556,36 @@ private fun Keypad(onKey: (String) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 row.forEach { key ->
+                    val isAction = key == "." || key == "⌫"
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(46.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surface)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(
+                                if (isAction) MaterialTheme.colorScheme.surfaceVariant
+                                else MaterialTheme.colorScheme.surface
+                            )
                             .clickable { onKey(key) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = key,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (key == "⌫") FontWeight.Normal else FontWeight.SemiBold,
-                            color = if (key == "⌫") MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurface
-                        )
+                        if (key == "⌫") {
+                            Icon(
+                                imageVector = Icons.Outlined.Backspace,
+                                contentDescription = "退格",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        } else {
+                            Text(
+                                text = key,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontSize = if (isAction) 16.sp else 19.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isAction) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
@@ -453,7 +593,31 @@ private fun Keypad(onKey: (String) -> Unit) {
     }
 }
 
-/** 键盘输入规则：最多一个小数点、最多两位小数、不允许前导零堆叠 */
+@Composable
+private fun NoteDialog(initial: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("备注") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text.trim()) }) { Text("确定") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
+}
+
+/** 输入规则：最多一个小数点、最多两位小数、不出现前导零堆叠 */
 private fun applyKey(current: String, key: String): String {
     return when (key) {
         "⌫" -> current.dropLast(1)

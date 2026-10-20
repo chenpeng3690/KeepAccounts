@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.text.KeyboardOptions
@@ -295,6 +296,31 @@ fun LetterAvatar(
             color = bg,
             maxLines = 1,
             overflow = TextOverflow.Clip
+        )
+    }
+}
+
+/** 设计稿里的分类色块：圆角方块 + 首字，底色是分类色的低透明度，文字用分类色本身 */
+@Composable
+fun LetterSquare(
+    text: String,
+    colorHex: String,
+    size: Dp = 36.dp
+) {
+    val base = runCatching { colorHex.toColor() }.getOrElse { MaterialTheme.colorScheme.primary }
+    Box(
+        modifier = Modifier
+            .size(size)
+            .background(base.copy(alpha = 0.12f), RoundedCornerShape(size * 0.33f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text.take(1),
+            style = MaterialTheme.typography.titleSmall,
+            fontSize = (size.value * 0.36f).sp,
+            fontWeight = FontWeight.Bold,
+            color = base,
+            maxLines = 1
         )
     }
 }

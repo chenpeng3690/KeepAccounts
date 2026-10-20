@@ -5,40 +5,40 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepaccounts.data.local.db.TransactionEntity
 import com.keepaccounts.data.local.db.TxSource
 import com.keepaccounts.data.local.db.TxType
-import com.keepaccounts.ui.component.LetterAvatar
-import com.keepaccounts.ui.component.ScreenHeader
+import com.keepaccounts.ui.component.LetterSquare
 import com.keepaccounts.ui.kaViewModel
 import com.keepaccounts.ui.theme.KaTheme
 import com.keepaccounts.ui.theme.TabularNumbers
@@ -46,7 +46,12 @@ import com.keepaccounts.ui.viewmodel.DayGroup
 import com.keepaccounts.ui.viewmodel.LedgerUiState
 import com.keepaccounts.ui.viewmodel.LedgerViewModel
 import com.keepaccounts.util.Money
+import com.keepaccounts.util.Time
 
+/**
+ * 账单首页。布局对齐 docs/ui-preview.html 第 01 屏：
+ * 标题栏（搜索 / 筛选）→ 月度汇总卡 → 预算条（有预算才出现）→ 白色列表卡（日期分组 + 流水）。
+ */
 @Composable
 fun LedgerScreen(
     onOpenEntry: () -> Unit,
@@ -60,44 +65,42 @@ fun LedgerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
-            ScreenHeader(title = "账单") {
-                IconButton(onClick = onOpenSearch) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "搜索",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "账单",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(Modifier.weight(1f))
+                NavIconButton(Icons.Outlined.Search, "搜索", onOpenSearch)
+                Spacer(Modifier.width(8.dp))
+                NavIconButton(Icons.Outlined.FilterList, "筛选", onOpenSearch)
             }
 
-            MonthSummaryCard(
-                expense = state.monthExpense,
-                income = state.monthIncome
-            )
+            MonthSummaryCard(expense = state.monthExpense, income = state.monthIncome)
+
+            state.budgetTotal?.let { total ->
+                Spacer(Modifier.height(10.dp))
+                BudgetStrip(used = state.monthExpense, total = total)
+            }
 
             if (state.loaded && state.groups.isEmpty()) {
                 EmptyLedger(onOpenEntry)
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(top = 12.dp, bottom = 96.dp)
-                ) {
-                    state.groups.forEach { group ->
-                        item(key = "h-${group.dayStart}") {
-                            DayHeader(group)
-                        }
-                        items(items = group.items, key = { it.id }) { txn ->
-                            TxnRow(
-                                txn = txn,
-                                state = state,
-                                onClick = { onOpenTxn(txn.id) }
-                            )
-                        }
-                    }
-                }
+                Spacer(Modifier.height(12.dp))
+                TransactionCard(state = state, onOpenTxn = onOpenTxn)
             }
+
+            Spacer(Modifier.height(96.dp))
         }
 
         FloatingActionButton(
@@ -115,64 +118,158 @@ fun LedgerScreen(
 }
 
 @Composable
-private fun MonthSummaryCard(expense: Long, income: Long) {
-    Column(
+private fun NavIconButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
+            .size(30.dp)
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "本月支出",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
         )
-        Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = "¥",
-                style = MaterialTheme.typography.titleMedium,
-                color = KaTheme.extra.expense,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 4.dp, end = 2.dp)
-            )
-            Text(
-                text = Money.format(expense),
-                style = MaterialTheme.typography.headlineMedium.merge(TabularNumbers),
-                color = KaTheme.extra.expense,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-            Column {
+    }
+}
+
+@Composable
+private fun MonthSummaryCard(expense: Long, income: Long) {
+    val month = Time.toLocal(System.currentTimeMillis()).monthValue
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Column(Modifier.weight(1f)) {
                 Text(
-                    text = "本月收入",
+                    text = "$month 月支出",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = "¥",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = KaTheme.extra.expense,
+                        modifier = Modifier.padding(bottom = 3.dp, end = 1.dp)
+                    )
+                    Text(
+                        text = Money.format(expense),
+                        style = MaterialTheme.typography.headlineMedium.merge(TabularNumbers),
+                        fontWeight = FontWeight.Bold,
+                        color = KaTheme.extra.expense
+                    )
+                }
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "收入",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(3.dp))
                 Text(
                     text = Money.format(income),
-                    style = MaterialTheme.typography.titleSmall.merge(TabularNumbers),
-                    color = KaTheme.extra.income,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
+                    fontWeight = FontWeight.SemiBold,
+                    color = KaTheme.extra.income
                 )
-            }
-            Column {
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "本月结余",
+                    text = "结余",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(3.dp))
                 Text(
                     text = Money.format(income - expense),
-                    style = MaterialTheme.typography.titleSmall.merge(TabularNumbers),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BudgetStrip(used: Long, total: Long) {
+    if (total <= 0) return
+    val ratio = (used.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    val remain = (total - used).coerceAtLeast(0)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(Modifier.padding(horizontal = 13.dp, vertical = 11.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "本月预算已用 ${(ratio * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "剩 ${Money.format(remain)}",
+                    style = MaterialTheme.typography.labelMedium.merge(TabularNumbers),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        RoundedCornerShape(3.dp)
+                    )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(ratio)
+                        .height(6.dp)
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(3.dp))
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransactionCard(state: LedgerUiState, onOpenTxn: (Long) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 4.dp)) {
+            state.groups.forEach { group ->
+                DayHeader(group)
+                group.items.forEachIndexed { index, txn ->
+                    if (index > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(MaterialTheme.colorScheme.outlineVariant)
+                        )
+                    }
+                    TransactionRow(txn = txn, state = state, onClick = { onOpenTxn(txn.id) })
+                }
             }
         }
     }
@@ -183,7 +280,8 @@ private fun DayHeader(group: DayGroup) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 14.dp, bottom = 6.dp, start = 2.dp, end = 2.dp),
+            .padding(top = 11.dp, bottom = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -192,100 +290,131 @@ private fun DayHeader(group: DayGroup) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium
         )
-        Spacer(Modifier.weight(1f))
-        val parts = buildList {
-            if (group.expense > 0) add("支出 ${Money.format(group.expense)}")
-            if (group.income > 0) add("收入 ${Money.format(group.income)}")
-        }
         Text(
-            text = parts.joinToString("  "),
-            style = MaterialTheme.typography.labelSmall.merge(TabularNumbers),
+            text = if (group.expense > 0) {
+                "支出 ¥${Money.format(group.expense)}"
+            } else {
+                "收入 ¥${Money.format(group.income)}"
+            },
+            style = MaterialTheme.typography.labelMedium.merge(TabularNumbers),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 @Composable
-private fun TxnRow(txn: TransactionEntity, state: LedgerUiState, onClick: () -> Unit) {
+private fun TransactionRow(txn: TransactionEntity, state: LedgerUiState, onClick: () -> Unit) {
     val category = txn.categoryId?.let { state.categories[it] }
     val account = state.accounts[txn.accountId]
-
     val isAdjustment = txn.source == TxSource.ADJUSTMENT
+    val isTransfer = txn.type == TxType.TRANSFER
+    val incoming = txn.type == TxType.INCOME || txn.type == TxType.REFUND
+
     val title = when {
         isAdjustment -> "余额调整"
-        !txn.merchant.isNullOrBlank() -> txn.merchant
+        !txn.merchant.isNullOrBlank() -> txn.merchant.orEmpty()
+        !txn.note.isNullOrBlank() -> txn.note.orEmpty()
         category != null -> category.name
-        txn.type == TxType.TRANSFER -> "转账"
+        isTransfer -> "转账"
         else -> "未分类"
     }
+
     val subtitle = buildList {
-        if (txn.type == TxType.TRANSFER) {
-            val to = txn.toAccountId?.let { state.accounts[it] }
+        if (isTransfer) {
             add("转账")
-            if (to != null) add("→ ${to.name}")
+            txn.toAccountId?.let { to -> state.accounts[to]?.let { add("→ ${it.name}") } }
         } else {
-            if (category != null) add(category.name)
-            if (account != null) add(account.name)
+            category?.let { add(it.name) }
+            account?.let { add(it.name) }
             if (isAdjustment) add("不计收支")
         }
     }.joinToString(" · ")
 
-    val positive = txn.type == TxType.INCOME || txn.type == TxType.REFUND ||
-        (txn.type == TxType.TRANSFER && txn.toAccountId == txn.accountId)
     val amountColor = when {
         isAdjustment -> MaterialTheme.colorScheme.onSurfaceVariant
-        txn.type == TxType.TRANSFER -> KaTheme.extra.transfer
-        positive -> KaTheme.extra.income
+        isTransfer -> KaTheme.extra.transfer
+        incoming -> KaTheme.extra.income
         else -> KaTheme.extra.expense
     }
-    val sign = when {
+    val signText = when {
         isAdjustment -> if (txn.type == TxType.INCOME) "+" else "-"
-        txn.type == TxType.TRANSFER -> ""
-        positive -> "+"
+        isTransfer -> ""
+        incoming -> "+"
         else -> "-"
     }
-    val avatarColor = category?.color ?: if (isAdjustment) "#A0A6B0" else "#6287D8"
-    val avatarText = when {
-        isAdjustment -> "调"
-        category != null -> category.name
-        txn.type == TxType.TRANSFER -> "转"
-        else -> "?"
+
+    // 设计稿：分类色块里放分类名首字，颜色由数据决定，不写死
+    val tint = category?.color ?: "#A0A6B0"
+    val badge = when {
+        isAdjustment -> "调整"
+        txn.source == TxSource.NOTIFICATION -> "通知"
+        txn.source == TxSource.IMPORT -> "导入"
+        else -> "手动"
+    }
+    val dotColor = when {
+        txn.source == TxSource.NOTIFICATION || txn.source == TxSource.IMPORT ->
+            MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.outline
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LetterAvatar(text = avatarText, colorHex = avatarColor, size = 36.dp)
-        Spacer(Modifier.width(12.dp))
+        LetterSquare(
+            text = when {
+                isAdjustment -> "调"
+                isTransfer -> "转"
+                else -> category?.name ?: "?"
+            },
+            colorHex = tint,
+            size = 36.dp
+        )
+        Spacer(Modifier.width(11.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                text = title ?: "未分类",
+                text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
-        Text(
-            text = "$sign${Money.format(txn.amount)}",
-            style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
-            fontWeight = FontWeight.SemiBold,
-            color = amountColor
-        )
+        Spacer(Modifier.width(8.dp))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = "$signText${Money.format(txn.amount)}",
+                style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
+                fontWeight = FontWeight.SemiBold,
+                color = amountColor
+            )
+            Spacer(Modifier.height(3.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(dotColor, CircleShape)
+                )
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    text = badge,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -294,7 +423,7 @@ private fun EmptyLedger(onOpenEntry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 40.dp),
+            .padding(top = 60.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -305,17 +434,14 @@ private fun EmptyLedger(onOpenEntry: () -> Unit) {
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "点右下角记第一笔。\n通知自动记账在第 5 步接上。",
+            text = "点右下角记第一笔",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = 20.sp,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(16.dp))
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
                 .clickable(onClick = onOpenEntry)
                 .padding(horizontal = 20.dp, vertical = 10.dp)
         ) {

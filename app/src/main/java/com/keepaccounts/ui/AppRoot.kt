@@ -3,10 +3,10 @@ package com.keepaccounts.ui
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.InsertChart
-import androidx.compose.material.icons.outlined.NotificationsActive
-import androidx.compose.material.icons.outlined.ReceiptLong
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.Subject
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -53,11 +53,11 @@ enum class KaTab(
     val label: String,
     val icon: ImageVector
 ) {
-    Ledger("ledger", "账单", Icons.Outlined.ReceiptLong),
+    Ledger("ledger", "账单", Icons.Outlined.Subject),
     Assets("assets", "资产", Icons.Outlined.AccountBalanceWallet),
-    Pending("pending", "待确认", Icons.Outlined.NotificationsActive),
-    Stats("stats", "统计", Icons.Outlined.InsertChart),
-    Settings("settings", "设置", Icons.Outlined.Settings)
+    Pending("pending", "待确认", Icons.Outlined.NotificationsNone),
+    Stats("stats", "统计", Icons.Outlined.BarChart),
+    Settings("settings", "设置", Icons.Outlined.Tune)
 }
 
 /** 二级页面的路由，不进底部导航 */
