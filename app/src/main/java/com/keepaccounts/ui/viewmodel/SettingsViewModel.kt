@@ -72,8 +72,6 @@ class SettingsViewModel(
                 autoBackupIntervalDays = intervalDays
             )
             WorkScheduler.scheduleAutoBackup(appContext, if (enabled) intervalDays else 0)
-            // 刚打开时立刻跑一次，让用户当场看到它生效
-            if (enabled) WorkScheduler.runAutoBackupNow(appContext)
         }
     }
 

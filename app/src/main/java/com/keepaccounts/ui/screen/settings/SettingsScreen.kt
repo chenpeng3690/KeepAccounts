@@ -155,7 +155,7 @@ fun SettingsScreen(onOpenTrash: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "默认关闭。按周期在本机生成快照，保留最近 5 份",
+                        text = "默认关闭。备份写在本机私有目录，保留最近 5 份",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

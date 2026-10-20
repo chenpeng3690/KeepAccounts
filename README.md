@@ -30,9 +30,9 @@
 | 数据库 | Room + **SQLCipher** | 数据库文件加密，手机被翻看时账本不裸奔；密钥由 Keystore 包裹 |
 | 依赖注入 | 手写 `AppContainer` | 依赖只有 DB → Repository → UI 一层，Hilt 会引入两个插件 + 注解处理器，是构建链上风险最高的部分 |
 | 构建 | AGP 8.5.2 / Gradle 8.7 / JDK 17 | |
-| 后台任务 | WorkManager | 回收站每日清理、自动备份（默认关闭，周期 1/3/7/30 天） |
+| 后台任务 | WorkManager | 回收站每日清理、自动备份（默认关闭） |
 | SDK | minSdk 29、targetSdk 34 | minSdk 29 是 `MediaStore.Downloads` 免权限写公共目录的前提 |
-| 图标 | material-icons-extended **1.7.8**（显式钉版本） | 该 artifact 从未发布 1.7.5，而 BOM 2024.10.01 恰好指向 1.7.5，因此用 `resolutionStrategy.force` 钉到 1.7.8，同时把 icons-core 一起对齐 |
+| 图标 | material-icons-extended | 底部导航用的 ReceiptLong / AccountBalanceWallet 在 core 包里没有 |
 
 ---
 

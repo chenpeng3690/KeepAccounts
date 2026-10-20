@@ -53,15 +53,6 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-// BOM 2024.10.01 把 material-icons-extended 约束到 1.7.5，而 1.7.5 从未发布。
-// 这里强制到 1.7.8，并同步 core，保证两个图标 artifact 版本一致。
-configurations.configureEach {
-    resolutionStrategy {
-        force("androidx.compose.material:material-icons-extended:1.7.8")
-        force("androidx.compose.material:material-icons-core:1.7.8")
-    }
-}
-
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -75,8 +66,7 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
-    implementation(libs.compose.icons.extended)
-    implementation(libs.compose.icons.core)
+    implementation(libs.compose.material.icons.extended)
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
