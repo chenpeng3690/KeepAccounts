@@ -7,7 +7,10 @@ compileSdk = "34"
 minSdk = "29"
 targetSdk = "34"
 
-composeBom = "2024.10.01"
+# 2024.12.01 = compose ui 1.7.6 / material3 1.3.1 / icons 1.7.6，
+# 比 2024.10.01 只高一个补丁位，函数签名没变，不需要动 AGP / Gradle / compileSdk。
+# 顺带解决 material-icons-extended 在 1.7.5 上解析失败的问题（1.7.6 确实存在）。
+composeBom = "2024.12.01"
 activityCompose = "1.9.1"
 navigationCompose = "2.8.3"
 lifecycle = "2.8.7"
