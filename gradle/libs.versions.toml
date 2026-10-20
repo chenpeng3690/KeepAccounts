@@ -38,9 +38,6 @@ compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-# 底部导航要用到 ReceiptLong / AccountBalanceWallet / NotificationsActive 等图标，
-# material-icons-core 里没有，必须显式引 extended
-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
