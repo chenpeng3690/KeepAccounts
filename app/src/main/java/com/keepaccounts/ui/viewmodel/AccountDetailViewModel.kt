@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.keepaccounts.core.AppContainer
 import com.keepaccounts.data.local.db.AccountEntity
+import com.keepaccounts.data.local.db.CategoryEntity
 import com.keepaccounts.data.local.db.TransactionEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ data class AccountDetailUiState(
     val monthIncome: Long = 0,
     val recent: List<TransactionEntity> = emptyList(),
     val allAccounts: List<AccountEntity> = emptyList(),
+    val categories: Map<Long, CategoryEntity> = emptyMap(),
     val loaded: Boolean = false
 )
 
@@ -24,19 +26,27 @@ class AccountDetailViewModel(
     private val accountId: Long
 ) : ViewModel() {
 
+    private data class Figures(val expense: Long, val income: Long)
+
+    private val figures = combine(
+        container.txnRepo.observeAccountMonthExpense(accountId),
+        container.txnRepo.observeAccountMonthIncome(accountId)
+    ) { expense, income -> Figures(expense, income) }
+
     val state: StateFlow<AccountDetailUiState> = combine(
         container.accountRepo.observeById(accountId),
-        container.txnRepo.observeAccountMonthExpense(accountId),
-        container.txnRepo.observeAccountMonthIncome(accountId),
+        figures,
         container.txnRepo.observeForAccount(accountId, 20),
-        container.accountRepo.observeActive()
-    ) { account, expense, income, recent, allAccounts ->
+        container.accountRepo.observeActive(),
+        container.categoryRepo.observeAll()
+    ) { account, figure, recent, allAccounts, categories ->
         AccountDetailUiState(
             account = account,
-            monthExpense = expense,
-            monthIncome = income,
+            monthExpense = figure.expense,
+            monthIncome = figure.income,
             recent = recent,
             allAccounts = allAccounts,
+            categories = categories.associateBy { it.id },
             loaded = true
         )
     }.stateIn(
@@ -45,13 +55,18 @@ class AccountDetailViewModel(
         initialValue = AccountDetailUiState()
     )
 
-    suspend fun transfer(toAccountId: Long, amountCents: Long, note: String?): String? {
-        val account = container.accountRepo.findById(accountId) ?: return "账户不存在"
-        if (toAccountId == accountId) return "转出与转入不能是同一个账户"
+    /** 账户之间转账（含信用卡还款：从储蓄卡转入信用卡） */
+    suspend fun transferBetween(
+        fromAccountId: Long,
+        toAccountId: Long,
+        amountCents: Long,
+        note: String?
+    ): String? {
+        if (fromAccountId == toAccountId) return "转出与转入不能是同一个账户"
         if (amountCents <= 0) return "金额必须大于 0"
         return runCatching {
             container.accountRepo.transfer(
-                fromAccountId = account.id,
+                fromAccountId = fromAccountId,
                 toAccountId = toAccountId,
                 amount = amountCents,
                 note = note?.takeIf { it.isNotBlank() }

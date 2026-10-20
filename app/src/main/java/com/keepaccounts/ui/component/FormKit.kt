@@ -1,6 +1,8 @@
 package com.keepaccounts.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -321,6 +323,29 @@ fun LetterSquare(
             fontWeight = FontWeight.Bold,
             color = base,
             maxLines = 1
+        )
+    }
+}
+
+/** 标题栏上的方形小图标按钮（30dp 圆角 10），设计稿里统一用它 */
+@Composable
+fun KaIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
         )
     }
 }

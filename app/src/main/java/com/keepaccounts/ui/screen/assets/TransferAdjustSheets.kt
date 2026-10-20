@@ -22,27 +22,39 @@ import com.keepaccounts.ui.component.KaSheetActions
 import com.keepaccounts.ui.theme.TabularNumbers
 import com.keepaccounts.util.Money
 
-/** 转账：两端账户对冲，不计入收支统计 */
+/**
+ * 账户之间的资金移动。
+ *
+ * 同一个弹层承担两种语义：
+ * - [fixedIsSource] = true：从这个账户转出（普通转账）
+ * - false：钱还进这个账户（信用卡还款）
+ * 只改方向，账务处理完全一样 —— 两端对冲，不计收支。
+ */
 @Composable
 fun TransferSheet(
-    from: AccountEntity,
-    targets: List<AccountEntity>,
+    fixedAccount: AccountEntity,
+    candidates: List<AccountEntity>,
+    fixedIsSource: Boolean,
     onDismiss: () -> Unit,
-    onSave: (toAccountId: Long, amountCents: Long, note: String?) -> Unit
+    onSave: (fromId: Long, toId: Long, cents: Long, note: String?) -> Unit
 ) {
     var targetIndex by remember { mutableStateOf(0) }
     var amountText by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
 
-    KaSheet(
-        title = "转账",
-        subtitle = "从「${from.name}」转出，两端账户同时变动，不计入收支",
-        onDismiss = onDismiss
-    ) {
-        if (targets.isEmpty()) {
+    val title = if (fixedIsSource) "转账" else "还款"
+    val subtitle = if (fixedIsSource) {
+        "从「${fixedAccount.name}」转出，两端账户同时变动，不计入收支"
+    } else {
+        "还款到「${fixedAccount.name}」，减少欠款，不计入支出"
+    }
+    val pickLabel = if (fixedIsSource) "转入账户" else "付款账户"
+
+    KaSheet(title = title, subtitle = subtitle, onDismiss = onDismiss) {
+        if (candidates.isEmpty()) {
             Text(
-                text = "还没有其他账户可以转入。先再建一个账户。",
+                text = "还没有其他账户可用。先再建一个账户。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 22.sp
@@ -52,13 +64,13 @@ fun TransferSheet(
         }
 
         Text(
-            text = "转入账户",
+            text = pickLabel,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(6.dp))
         KaChips(
-            options = targets.map { it.name },
+            options = candidates.map { it.name },
             selectedIndex = targetIndex,
             onSelect = { targetIndex = it }
         )
@@ -75,24 +87,26 @@ fun TransferSheet(
         Spacer(Modifier.height(10.dp))
         KaField(
             value = note,
-            onValueChange = { note = it; error = null },
+            onValueChange = { note = it },
             label = "备注（选填）",
-            placeholder = "例如：信用卡还款"
+            placeholder = if (fixedIsSource) "例如：还信用卡" else "例如：建行还款"
         )
 
         KaSheetActions(
-            confirmText = "转账",
+            confirmText = title,
             errorText = error,
             onDismiss = onDismiss,
             onConfirm = {
                 val cents = Money.parse(amountText)
+                val target = candidates.getOrNull(targetIndex)
                 when {
                     cents == null -> error = "金额格式不对"
                     cents <= 0 -> error = "金额必须大于 0"
+                    target == null -> error = "目标账户无效"
                     else -> {
-                        val target = targets.getOrNull(targetIndex)
-                        if (target == null) error = "转入账户无效"
-                        else onSave(target.id, cents, note.takeIf { it.isNotBlank() })
+                        val fromId = if (fixedIsSource) fixedAccount.id else target.id
+                        val toId = if (fixedIsSource) target.id else fixedAccount.id
+                        onSave(fromId, toId, cents, note.takeIf { it.isNotBlank() })
                     }
                 }
             }
@@ -142,11 +156,8 @@ fun AdjustSheet(
             onDismiss = onDismiss,
             onConfirm = {
                 val raw = Money.parse(text)
-                if (raw == null) {
-                    error = "金额格式不对"
-                } else {
-                    onSave(if (liability) -raw else raw)
-                }
+                if (raw == null) error = "金额格式不对"
+                else onSave(if (liability) -raw else raw)
             }
         )
     }
