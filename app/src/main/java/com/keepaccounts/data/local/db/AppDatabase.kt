@@ -27,7 +27,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun rawEventDao(): RawEventDao
     abstract fun ruleDao(): RuleDao
     abstract fun budgetDao(): BudgetDao
+    /** 备份历史（backup_history 表） */
     abstract fun backupDao(): BackupDao
+    /** 备份导入导出专用的全表访问口 */
+    abstract fun backupAccessDao(): BackupAccessDao
     abstract fun settingsDao(): SettingsDao
 
     companion object {

@@ -6,6 +6,7 @@ import com.keepaccounts.data.local.db.DatabaseProvider
 import com.keepaccounts.data.local.db.SeedData
 import com.keepaccounts.data.repo.AccountRepository
 import com.keepaccounts.data.repo.CategoryRepository
+import com.keepaccounts.data.backup.BackupRepository
 import com.keepaccounts.data.repo.SettingsRepository
 import com.keepaccounts.data.repo.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +34,7 @@ class AppContainer(context: Context) {
     val categoryRepo: CategoryRepository by lazy { CategoryRepository(db) }
     val txnRepo: TransactionRepository by lazy { TransactionRepository(db) }
     val settingsRepo: SettingsRepository by lazy { SettingsRepository(db) }
+    val backupRepo: BackupRepository by lazy { BackupRepository(db) }
 
     /** 首帧之前先把种子数据准备好，避免首页闪一下空列表 */
     fun bootstrap() {

@@ -32,7 +32,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.keepaccounts.core.AppContainer
 import com.keepaccounts.ui.screen.PendingScreen
-import com.keepaccounts.ui.screen.SettingsScreen
 import com.keepaccounts.ui.screen.StatsScreen
 import com.keepaccounts.ui.screen.assets.AccountDetailScreen
 import com.keepaccounts.ui.screen.assets.AssetsScreen
@@ -40,6 +39,8 @@ import com.keepaccounts.ui.screen.category.CategoryManageScreen
 import com.keepaccounts.ui.screen.entry.EntryScreen
 import com.keepaccounts.ui.screen.ledger.LedgerScreen
 import com.keepaccounts.ui.screen.search.SearchScreen
+import com.keepaccounts.ui.screen.settings.SettingsScreen
+import com.keepaccounts.ui.screen.trash.TrashScreen
 
 /**
  * 底部导航固定 5 个，顺序不能改：账单 / 资产 / 待确认 / 统计 / 设置。
@@ -65,6 +66,7 @@ object KaRoute {
     const val ENTRY = "entry?txnId={txnId}"
     const val SEARCH = "search"
     const val CATEGORIES = "categories"
+    const val TRASH = "trash"
 
     fun accountDetail(id: Long) = "account/$id"
 
@@ -165,7 +167,9 @@ fun AppRoot(container: AppContainer) {
             }
             composable(KaTab.Pending.route) { PendingScreen(container) }
             composable(KaTab.Stats.route) { StatsScreen(container) }
-            composable(KaTab.Settings.route) { SettingsScreen(container) }
+            composable(KaTab.Settings.route) {
+                SettingsScreen(onOpenTrash = { navController.navigate(KaRoute.TRASH) })
+            }
 
             composable(
                 route = KaRoute.ENTRY,
@@ -193,6 +197,10 @@ fun AppRoot(container: AppContainer) {
 
             composable(KaRoute.CATEGORIES) {
                 CategoryManageScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(KaRoute.TRASH) {
+                TrashScreen(onBack = { navController.popBackStack() })
             }
 
             composable(

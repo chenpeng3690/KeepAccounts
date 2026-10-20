@@ -14,7 +14,7 @@
 | 1 | 工程骨架 + 加密数据层 + 5 Tab 导航 | ✅ |
 | 2 | 账户与资产（净资产、信用卡、转账、余额校准） | ✅ |
 | 3 | 账单与分类（记账、列表、编辑删除、搜索） | ✅ |
-| 4 | 回收站 + 设置 + 备份恢复 | ⬜ |
+| 4 | 回收站 + 设置 + 备份恢复 | ✅ |
 | 5 | 通知采集（白名单、原始事件） | ⬜ |
 | 6 | 解析引擎 + 内置规则 + 待确认箱 | ⬜ |
 | 7 | 自定义规则向导 + 记账浮悬提示 | ⬜ |
@@ -30,6 +30,7 @@
 | 数据库 | Room + **SQLCipher** | 数据库文件加密，手机被翻看时账本不裸奔；密钥由 Keystore 包裹 |
 | 依赖注入 | 手写 `AppContainer` | 依赖只有 DB → Repository → UI 一层，Hilt 会引入两个插件 + 注解处理器，是构建链上风险最高的部分 |
 | 构建 | AGP 8.5.2 / Gradle 8.7 / JDK 17 | |
+| 后台任务 | WorkManager | 回收站每日清理、自动备份（默认关闭） |
 | SDK | minSdk 29、targetSdk 34 | minSdk 29 是 `MediaStore.Downloads` 免权限写公共目录的前提 |
 | 图标 | material-icons-extended | 底部导航用的 ReceiptLong / AccountBalanceWallet 在 core 包里没有 |
 

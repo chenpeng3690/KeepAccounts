@@ -107,19 +107,3 @@ fun StatsScreen(container: AppContainer) {
     )
 }
 
-@Composable
-fun SettingsScreen(container: AppContainer) {
-    StepPlaceholder(
-        title = "设置",
-        step = 4,
-        description = "通知使用权状态、白名单、解析规则、备份与回收站都在这里。通知使用权会常驻显示——服务被系统杀掉后，这个入口必须随时可查。",
-        planned = listOf(
-            "通知使用权状态与跳转授权",
-            "回收站保留期：3 / 7 / 30 天",
-            "手动备份与恢复（口令加密）",
-            "自动备份：默认关闭，周期 1 / 3 / 7 / 30 天",
-            "记账提示档位与静音时段",
-            "深色模式跟随系统"
-        )
-    )
-}

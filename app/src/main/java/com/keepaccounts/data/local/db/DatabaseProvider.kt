@@ -12,7 +12,7 @@ import java.security.SecureRandom
  *
  * **数据库加密密钥 ≠ 备份文件加密密钥**，这套两套密钥不能混用：
  * - 本机数据库：Keystore 包裹的随机密钥，用户无感，换机也不需要它。
- * - 备份文件：必须用「用户口令 + PBKDF2 派生」。因为 Keystore 密钥绑定设备，
+ * - 备份文件：必须用「用户口令 + 口令派生密钥」。因为 Keystore 密钥绑定设备，
  *   换机后它就不存在了，用它加密的备份等于造出一个永远打不开的文件。
  */
 object DatabaseProvider {
