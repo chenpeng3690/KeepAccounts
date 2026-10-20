@@ -3,6 +3,7 @@ package com.keepaccounts.data.local.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -16,6 +17,9 @@ interface BudgetDao {
 
     @Insert
     suspend fun insert(budget: BudgetEntity): Long
+
+    @Update
+    suspend fun update(budget: BudgetEntity)
 
     @Query("DELETE FROM budgets WHERE id = :id")
     suspend fun delete(id: Long)

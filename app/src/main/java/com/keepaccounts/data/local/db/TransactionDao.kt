@@ -34,12 +34,13 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL AND status = :status")
     fun observeCountByStatus(status: String): Flow<Int>
 
-    /** 只统计 confirmed 的流水；pending 不进余额也不进报表 */
+    /** 只统计 confirmed 的流水；pending 不进余额也不进报表；余额调整不计收支 */
     @Query(
         """
         SELECT IFNULL(SUM(amount), 0) FROM transactions
         WHERE deleted_at IS NULL AND status = 'confirmed'
-          AND type = :type AND occurred_at BETWEEN :from AND :to
+          AND type = :type AND source != 'adjustment'
+          AND occurred_at BETWEEN :from AND :to
         """
     )
     fun observeSum(type: String, from: Long, to: Long): Flow<Long>
@@ -66,7 +67,7 @@ interface TransactionDao {
         """
         SELECT IFNULL(SUM(amount), 0) FROM transactions
         WHERE deleted_at IS NULL AND status = 'confirmed'
-          AND account_id = :accountId AND type = :type
+          AND account_id = :accountId AND type = :type AND source != 'adjustment'
           AND occurred_at BETWEEN :from AND :to
         """
     )

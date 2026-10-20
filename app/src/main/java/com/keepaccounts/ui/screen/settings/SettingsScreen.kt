@@ -61,7 +61,8 @@ fun SettingsScreen(
     onOpenTrash: () -> Unit,
     onOpenWhitelist: () -> Unit,
     onOpenRawEvents: () -> Unit,
-    onOpenRules: () -> Unit
+    onOpenRules: () -> Unit,
+    onOpenImport: () -> Unit
 ) {
     val context = LocalContext.current
     val vm = kaViewModel { SettingsViewModel(it, context.applicationContext) }
@@ -168,6 +169,11 @@ fun SettingsScreen(
         // ---------- 数据 ----------
         SectionLabel(text = "数据")
         SettingGroup {
+            SettingRow(
+                title = "导入账单",
+                value = "微信 / 支付宝 CSV",
+                onClick = onOpenImport
+            )
             SettingRow(
                 title = "立即备份",
                 value = state.lastBackupAt?.let { "上次 ${formatDateTime(it)}" } ?: "还没有备份过",

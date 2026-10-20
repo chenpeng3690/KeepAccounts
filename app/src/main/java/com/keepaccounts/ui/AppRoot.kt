@@ -36,11 +36,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.keepaccounts.core.AppContainer
 import com.keepaccounts.notification.FeedbackEvent
-import com.keepaccounts.ui.screen.StatsScreen
 import com.keepaccounts.ui.screen.assets.AccountDetailScreen
 import com.keepaccounts.ui.screen.assets.AssetsScreen
 import com.keepaccounts.ui.screen.category.CategoryManageScreen
 import com.keepaccounts.ui.screen.entry.EntryScreen
+import com.keepaccounts.ui.screen.importcsv.ImportScreen
 import com.keepaccounts.ui.screen.ledger.LedgerScreen
 import com.keepaccounts.ui.screen.parselog.ParseLogScreen
 import com.keepaccounts.ui.screen.pending.PendingScreen
@@ -49,6 +49,7 @@ import com.keepaccounts.ui.screen.rules.RuleListScreen
 import com.keepaccounts.ui.screen.rules.RuleWizardScreen
 import com.keepaccounts.ui.screen.search.SearchScreen
 import com.keepaccounts.ui.screen.settings.SettingsScreen
+import com.keepaccounts.ui.screen.stats.StatsScreen
 import com.keepaccounts.ui.screen.trash.TrashScreen
 import com.keepaccounts.ui.screen.whitelist.WhitelistScreen
 
@@ -82,6 +83,7 @@ object KaRoute {
     const val RULES = "rules"
     const val PARSE_LOG = "parse_log"
     const val RULE_WIZARD = "rule_wizard"
+    const val IMPORT = "import"
 
     fun accountDetail(id: Long) = "account/$id"
 
@@ -198,13 +200,14 @@ fun AppRoot(container: AppContainer) {
                     onOpenLog = { navController.navigate(KaRoute.PARSE_LOG) }
                 )
             }
-            composable(KaTab.Stats.route) { StatsScreen(container) }
+            composable(KaTab.Stats.route) { StatsScreen() }
             composable(KaTab.Settings.route) {
                 SettingsScreen(
                     onOpenTrash = { navController.navigate(KaRoute.TRASH) },
                     onOpenWhitelist = { navController.navigate(KaRoute.WHITELIST) },
                     onOpenRawEvents = { navController.navigate(KaRoute.RAW_EVENTS) },
-                    onOpenRules = { navController.navigate(KaRoute.RULES) }
+                    onOpenRules = { navController.navigate(KaRoute.RULES) },
+                    onOpenImport = { navController.navigate(KaRoute.IMPORT) }
                 )
             }
 
@@ -226,6 +229,10 @@ fun AppRoot(container: AppContainer) {
 
             composable(KaRoute.RULE_WIZARD) {
                 RuleWizardScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(KaRoute.IMPORT) {
+                ImportScreen(onBack = { navController.popBackStack() })
             }
 
             composable(KaRoute.PARSE_LOG) {

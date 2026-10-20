@@ -11,6 +11,7 @@ import com.keepaccounts.data.repo.SettingsRepository
 import com.keepaccounts.notification.NotificationGate
 import com.keepaccounts.notification.FeedbackNotifier
 import com.keepaccounts.data.parse.BuiltinRules
+import com.keepaccounts.data.repo.ImportRepository
 import com.keepaccounts.data.repo.ParseRepository
 import com.keepaccounts.data.repo.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,7 @@ class AppContainer(context: Context) {
     val backupRepo: BackupRepository by lazy { BackupRepository(db) }
     val parseRepo: ParseRepository by lazy { ParseRepository(db, txnRepo, settingsRepo, feedbackNotifier) }
     val feedbackNotifier: FeedbackNotifier by lazy { FeedbackNotifier(this, appContext) }
+    val importRepo: ImportRepository by lazy { ImportRepository(db, txnRepo) }
 
     /** 首帧之前先把种子数据准备好，避免首页闪一下空列表 */
     fun bootstrap() {
