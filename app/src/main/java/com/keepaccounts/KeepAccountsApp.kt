@@ -2,7 +2,7 @@ package com.keepaccounts
 
 import android.app.Application
 import com.keepaccounts.core.AppContainer
-import com.keepaccounts.core.WorkScheduler
+import com.keepaccounts.core.Housekeeping
 import kotlinx.coroutines.launch
 
 class KeepAccountsApp : Application() {
@@ -16,11 +16,9 @@ class KeepAccountsApp : Application() {
         // 数据库懒加载：这里只是启动种子协程，不会在主线程打开 DB
         container.bootstrap()
 
-        WorkScheduler.scheduleRecycle(this)
+        // 回收站清理与自动备份都在打开 App 时补做，不依赖 WorkManager
         container.applicationScope.launch {
-            val enabled = container.settingsRepo.autoBackupEnabled()
-            val interval = container.settingsRepo.autoBackupIntervalDays()
-            WorkScheduler.scheduleAutoBackup(this@KeepAccountsApp, if (enabled) interval else 0)
+            Housekeeping.run(this@KeepAccountsApp, container)
         }
     }
 }
