@@ -31,14 +31,16 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.keepaccounts.core.AppContainer
-import com.keepaccounts.ui.screen.PendingScreen
 import com.keepaccounts.ui.screen.StatsScreen
 import com.keepaccounts.ui.screen.assets.AccountDetailScreen
 import com.keepaccounts.ui.screen.assets.AssetsScreen
 import com.keepaccounts.ui.screen.category.CategoryManageScreen
 import com.keepaccounts.ui.screen.entry.EntryScreen
 import com.keepaccounts.ui.screen.ledger.LedgerScreen
+import com.keepaccounts.ui.screen.parselog.ParseLogScreen
+import com.keepaccounts.ui.screen.pending.PendingScreen
 import com.keepaccounts.ui.screen.raw.RawEventsScreen
+import com.keepaccounts.ui.screen.rules.RuleListScreen
 import com.keepaccounts.ui.screen.search.SearchScreen
 import com.keepaccounts.ui.screen.settings.SettingsScreen
 import com.keepaccounts.ui.screen.trash.TrashScreen
@@ -71,6 +73,8 @@ object KaRoute {
     const val TRASH = "trash"
     const val WHITELIST = "whitelist"
     const val RAW_EVENTS = "raw_events"
+    const val RULES = "rules"
+    const val PARSE_LOG = "parse_log"
 
     fun accountDetail(id: Long) = "account/$id"
 
@@ -169,13 +173,19 @@ fun AppRoot(container: AppContainer) {
                     onOpenAccount = { id -> navController.navigate(KaRoute.accountDetail(id)) }
                 )
             }
-            composable(KaTab.Pending.route) { PendingScreen(container) }
+            composable(KaTab.Pending.route) {
+                PendingScreen(
+                    onManageRules = { navController.navigate(KaRoute.RULES) },
+                    onOpenLog = { navController.navigate(KaRoute.PARSE_LOG) }
+                )
+            }
             composable(KaTab.Stats.route) { StatsScreen(container) }
             composable(KaTab.Settings.route) {
                 SettingsScreen(
                     onOpenTrash = { navController.navigate(KaRoute.TRASH) },
                     onOpenWhitelist = { navController.navigate(KaRoute.WHITELIST) },
-                    onOpenRawEvents = { navController.navigate(KaRoute.RAW_EVENTS) }
+                    onOpenRawEvents = { navController.navigate(KaRoute.RAW_EVENTS) },
+                    onOpenRules = { navController.navigate(KaRoute.RULES) }
                 )
             }
 
@@ -185,6 +195,17 @@ fun AppRoot(container: AppContainer) {
 
             composable(KaRoute.RAW_EVENTS) {
                 RawEventsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(KaRoute.RULES) {
+                RuleListScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenLog = { navController.navigate(KaRoute.PARSE_LOG) }
+                )
+            }
+
+            composable(KaRoute.PARSE_LOG) {
+                ParseLogScreen(onBack = { navController.popBackStack() })
             }
 
             composable(

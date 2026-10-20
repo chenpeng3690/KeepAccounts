@@ -76,22 +76,6 @@ private fun StepPlaceholder(
 }
 
 @Composable
-fun PendingScreen(container: AppContainer) {
-    StepPlaceholder(
-        title = "待确认",
-        step = 6,
-        description = "通用规则猜出来的账单不直接入账，先落在这里等你确认。空态时会显示最近 7 天的解析概况，用来验证过滤规则还在正常工作。",
-        planned = listOf(
-            "低置信度记录列表：原文与抽取结果对照",
-            "确认入账 / 修改后入账 / 判为噪音 / 批量确认",
-            "「以后这个应用都这样记」一键生成规则草稿",
-            "空态：已自动入账与已拦截的统计 + 被拦通知摘要",
-            "解析日志入口"
-        )
-    )
-}
-
-@Composable
 fun StatsScreen(container: AppContainer) {
     StepPlaceholder(
         title = "统计",

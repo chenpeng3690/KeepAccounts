@@ -9,6 +9,8 @@ import com.keepaccounts.data.repo.CategoryRepository
 import com.keepaccounts.data.backup.BackupRepository
 import com.keepaccounts.data.repo.SettingsRepository
 import com.keepaccounts.notification.NotificationGate
+import com.keepaccounts.data.parse.BuiltinRules
+import com.keepaccounts.data.repo.ParseRepository
 import com.keepaccounts.data.repo.TransactionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,13 +38,17 @@ class AppContainer(context: Context) {
     val txnRepo: TransactionRepository by lazy { TransactionRepository(db) }
     val settingsRepo: SettingsRepository by lazy { SettingsRepository(db) }
     val backupRepo: BackupRepository by lazy { BackupRepository(db) }
+    val parseRepo: ParseRepository by lazy { ParseRepository(db, txnRepo, settingsRepo) }
 
     /** 首帧之前先把种子数据准备好，避免首页闪一下空列表 */
     fun bootstrap() {
         applicationScope.launch {
             runCatching { SeedData.ensure(db) }
+            runCatching { BuiltinRules.ensure(db) }
             // 白名单常驻内存，启动时先灌一次，监听服务才能零延迟判断
             runCatching { NotificationGate.refresh(settingsRepo) }
+            // 上次没解析完的采集记录补跑一遍
+            runCatching { parseRepo.processCaptured() }
         }
     }
 }

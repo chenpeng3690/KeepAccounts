@@ -27,6 +27,10 @@ interface AccountDao {
     @Query("SELECT COUNT(*) FROM accounts WHERE archived = 0")
     suspend fun countActive(): Int
 
+    /** 一次性读全部活跃账户，解析引擎用来找默认账户 */
+    @Query("SELECT * FROM accounts WHERE archived = 0 ORDER BY sort_order, id")
+    suspend fun listActive(): List<AccountEntity>
+
     @Insert
     suspend fun insert(account: AccountEntity): Long
 

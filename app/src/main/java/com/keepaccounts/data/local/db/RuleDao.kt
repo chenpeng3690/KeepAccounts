@@ -21,6 +21,9 @@ interface RuleDao {
     @Query("SELECT * FROM rules WHERE package_name IS NULL LIMIT 1")
     suspend fun findGeneric(): RuleEntity?
 
+    @Query("SELECT COUNT(*) FROM rules WHERE builtin = 1")
+    suspend fun countBuiltin(): Int
+
     @Query("SELECT * FROM rules WHERE id = :id")
     suspend fun findById(id: Long): RuleEntity?
 
@@ -87,6 +90,14 @@ interface RawEventDao {
 
     @Query("SELECT * FROM raw_events WHERE id = :id")
     suspend fun findById(id: Long): RawEventEntity?
+
+    /** 待确认箱按 rawEventId 反查原文 */
+    @Query("SELECT * FROM raw_events WHERE id IN (:ids)")
+    suspend fun listByIds(ids: List<Long>): List<RawEventEntity>
+
+    /** 还没解析的采集记录，启动时补跑一遍 */
+    @Query("SELECT * FROM raw_events WHERE parse_status = 'captured' ORDER BY received_at ASC LIMIT :limit")
+    suspend fun listCaptured(limit: Int): List<RawEventEntity>
 
     @Insert
     suspend fun insert(event: RawEventEntity): Long

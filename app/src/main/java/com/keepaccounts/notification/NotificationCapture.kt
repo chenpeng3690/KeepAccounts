@@ -22,19 +22,19 @@ object NotificationCapture {
         container: AppContainer,
         sbn: StatusBarNotification,
         content: NotificationTextExtractor.Content
-    ): Boolean {
-        val packageName = sbn.packageName ?: return false
+    ): Long? {
+        val packageName = sbn.packageName ?: return null
         val title = content.title
         val text = content.text
-        if (text.isBlank()) return false
+        if (text.isBlank()) return null
 
         val now = System.currentTimeMillis()
         // 系统可能对同一条通知重复回调，同文案在窗口期内只留一条
         val similar = container.db.rawEventDao()
             .countSimilar(packageName, title, text, now - DEDUPE_WINDOW_MS)
-        if (similar > 0) return false
+        if (similar > 0) return null
 
-        container.db.rawEventDao().insert(
+        return container.db.rawEventDao().insert(
             RawEventEntity(
                 packageName = packageName,
                 appLabel = NotificationGate.appLabel(context, packageName),
@@ -47,6 +47,5 @@ object NotificationCapture {
                 createdAt = now
             )
         )
-        return true
     }
 }

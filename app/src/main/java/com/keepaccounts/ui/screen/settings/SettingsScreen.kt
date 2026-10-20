@@ -58,7 +58,8 @@ import java.util.Locale
 fun SettingsScreen(
     onOpenTrash: () -> Unit,
     onOpenWhitelist: () -> Unit,
-    onOpenRawEvents: () -> Unit
+    onOpenRawEvents: () -> Unit,
+    onOpenRules: () -> Unit
 ) {
     val context = LocalContext.current
     val vm = kaViewModel { SettingsViewModel(it, context.applicationContext) }
@@ -154,7 +155,7 @@ fun SettingsScreen(
                 value = "${rawCount} 条样本",
                 onClick = onOpenRawEvents
             )
-            SettingRow(title = "解析规则", value = "第 6 步接上", enabled = false)
+            SettingRow(title = "解析规则", value = "查看与启停", onClick = onOpenRules)
         }
 
         // ---------- 数据 ----------

@@ -71,34 +71,40 @@ class TransactionRepository(private val db: AppDatabase) {
 
     suspend fun findById(id: Long): TransactionEntity? = txnDao.findById(id)
 
-    suspend fun add(draft: TxnDraft): Long {
+    suspend fun add(draft: TxnDraft): Long =
+        db.withTransaction { insertWithinTransaction(draft) }
+
+    /**
+     * 在**已有事务**里写流水并应用余额。
+     * 给解析引擎用：它需要「写流水 + 回写原始通知 + 记规则命中」落在一个事务里。
+     * 调用方必须已处于 [db.withTransaction] 之内。
+     */
+    suspend fun insertWithinTransaction(draft: TxnDraft): Long {
         val now = System.currentTimeMillis()
-        return db.withTransaction {
-            val entity = TransactionEntity(
-                type = draft.type,
-                amount = draft.amount,
-                occurredAt = draft.occurredAt,
-                accountId = draft.accountId,
-                toAccountId = draft.toAccountId,
-                categoryId = draft.categoryId,
-                merchant = draft.merchant,
-                note = draft.note,
-                source = draft.source,
-                confidence = draft.confidence,
-                status = draft.status,
-                refundOf = draft.refundOf,
-                rawEventId = draft.rawEventId,
-                ruleId = draft.ruleId,
-                createdAt = now,
-                updatedAt = now
-            )
-            val id = txnDao.insert(entity)
-            // 待确认的账单不进余额，等用户确认后再落账
-            if (entity.status == TxStatus.CONFIRMED) {
-                applyEffect(entity, sign = 1)
-            }
-            id
+        val entity = TransactionEntity(
+            type = draft.type,
+            amount = draft.amount,
+            occurredAt = draft.occurredAt,
+            accountId = draft.accountId,
+            toAccountId = draft.toAccountId,
+            categoryId = draft.categoryId,
+            merchant = draft.merchant,
+            note = draft.note,
+            source = draft.source,
+            confidence = draft.confidence,
+            status = draft.status,
+            refundOf = draft.refundOf,
+            rawEventId = draft.rawEventId,
+            ruleId = draft.ruleId,
+            createdAt = now,
+            updatedAt = now
+        )
+        val id = txnDao.insert(entity)
+        // 待确认的账单不进余额，等用户确认后再落账
+        if (entity.status == TxStatus.CONFIRMED) {
+            applyEffect(entity, sign = 1)
         }
+        return id
     }
 
     /** 编辑账单：先回滚旧值再套用新值，全程一个事务 */
@@ -125,7 +131,18 @@ class TransactionRepository(private val db: AppDatabase) {
     }
 
     /** 待确认 -> 正式入账，此时才动余额 */
-    suspend fun confirm(id: Long, patch: (TransactionEntity) -> TransactionEntity = { it }) {
+    suspend fun confirm(id: Long, patch: (TransactionEntity) -> TransactionEntity = { it }) =
+        confirmWith(id, patch)
+
+    /**
+     * 同 [confirm]，但带一个事务内回调，供解析引擎在落账后回写原始通知与规则统计。
+     * 回调在余额已更新、事务尚未提交时执行，保证三处写要么全成要么全不。
+     */
+    suspend fun confirmWith(
+        id: Long,
+        patch: (TransactionEntity) -> TransactionEntity = { it },
+        after: suspend (TransactionEntity) -> Unit = {}
+    ) {
         val now = System.currentTimeMillis()
         db.withTransaction {
             val old = txnDao.findById(id) ?: return@withTransaction
@@ -133,6 +150,7 @@ class TransactionRepository(private val db: AppDatabase) {
             val next = patch(old).copy(status = TxStatus.CONFIRMED, updatedAt = now)
             txnDao.update(next)
             applyEffect(next, sign = 1)
+            after(next)
         }
     }
 

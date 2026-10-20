@@ -95,4 +95,6 @@ object SettingKeys {
     const val WHITELIST = "whitelist_packages"
     /** 收录全部通知（true 时不再看白名单） */
     const val CAPTURE_ALL = "capture_all_apps"
+    /** 通用兜底规则开关，默认开。关闭后白名单内没有专属规则的应用不再解析 */
+    const val GENERIC_RULE_ENABLED = "generic_rule_enabled"
 }

@@ -75,6 +75,17 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL AND account_id = :accountId")
     suspend fun countByAccount(accountId: Long): Int
 
+    /** L6 去重：同账户 + 同金额 + 同商户在窗口期内只算一笔（通知更新/重复推送） */
+    @Query(
+        """
+        SELECT COUNT(*) FROM transactions
+        WHERE deleted_at IS NULL AND account_id = :accountId
+          AND amount = :amount AND merchant = :merchant
+          AND occurred_at >= :since
+        """
+    )
+    suspend fun countSimilar(merchant: String, amount: Long, accountId: Long, since: Long): Int
+
     /**
      * 搜索。用「空值即不筛选」的写法，避免在 DAO 里拼动态 SQL。
      * keyword 传 ""、type 传 ""、accountId 传 0 表示该条件不生效。
