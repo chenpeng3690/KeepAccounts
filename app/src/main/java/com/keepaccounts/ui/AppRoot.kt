@@ -24,16 +24,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.keepaccounts.core.AppContainer
-import com.keepaccounts.ui.screen.AssetsScreen
 import com.keepaccounts.ui.screen.LedgerScreen
 import com.keepaccounts.ui.screen.PendingScreen
 import com.keepaccounts.ui.screen.SettingsScreen
 import com.keepaccounts.ui.screen.StatsScreen
+import com.keepaccounts.ui.screen.assets.AccountDetailScreen
+import com.keepaccounts.ui.screen.assets.AssetsScreen
 
 /**
  * 底部导航固定 5 个，顺序不能改：账单 / 资产 / 待确认 / 统计 / 设置。
@@ -53,6 +56,12 @@ enum class KaTab(
     Settings("settings", "设置", Icons.Outlined.Settings)
 }
 
+/** 二级页面的路由，不进底部导航 */
+object KaRoute {
+    const val ACCOUNT_DETAIL = "account/{accountId}"
+    fun accountDetail(id: Long) = "account/$id"
+}
+
 @Composable
 fun AppRoot(container: AppContainer) {
     val navController = rememberNavController()
@@ -62,61 +71,67 @@ fun AppRoot(container: AppContainer) {
     val pendingCount by container.txnRepo.observePendingCount()
         .collectAsStateWithLifecycle(initialValue = 0)
 
+    // 二级页面不显示底部导航，否则详情页会像"还停在一级"
+    val showBottomBar = KaTab.entries.any { it.route == currentRoute }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp
-            ) {
-                KaTab.entries.forEach { tab ->
-                    val selected = currentRoute == tab.route
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            if (!selected) {
-                                navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+            if (showBottomBar) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp
+                ) {
+                    KaTab.entries.forEach { tab ->
+                        val selected = currentRoute == tab.route
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                if (!selected) {
+                                    navController.navigate(tab.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
                                 }
-                            }
-                        },
-                        icon = {
-                            val showBadge = tab == KaTab.Pending && pendingCount > 0
-                            BadgedBox(
-                                badge = {
-                                    if (showBadge) {
-                                        Badge {
-                                            Text(
-                                                text = if (pendingCount > 99) "99+" else pendingCount.toString(),
-                                                style = MaterialTheme.typography.labelSmall
-                                            )
+                            },
+                            icon = {
+                                val showBadge = tab == KaTab.Pending && pendingCount > 0
+                                BadgedBox(
+                                    badge = {
+                                        if (showBadge) {
+                                            Badge {
+                                                Text(
+                                                    text = if (pendingCount > 99) "99+"
+                                                    else pendingCount.toString(),
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
                                         }
                                     }
+                                ) {
+                                    Icon(imageVector = tab.icon, contentDescription = tab.label)
                                 }
-                            ) {
-                                Icon(imageVector = tab.icon, contentDescription = tab.label)
-                            }
-                        },
-                        label = {
-                            Text(
-                                text = tab.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                            },
+                            label = {
+                                Text(
+                                    text = tab.label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    )
+                    }
                 }
             }
         }
@@ -127,10 +142,25 @@ fun AppRoot(container: AppContainer) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(KaTab.Ledger.route) { LedgerScreen(container) }
-            composable(KaTab.Assets.route) { AssetsScreen(container) }
+            composable(KaTab.Assets.route) {
+                AssetsScreen(
+                    onOpenAccount = { id -> navController.navigate(KaRoute.accountDetail(id)) }
+                )
+            }
             composable(KaTab.Pending.route) { PendingScreen(container) }
             composable(KaTab.Stats.route) { StatsScreen(container) }
             composable(KaTab.Settings.route) { SettingsScreen(container) }
+
+            composable(
+                route = KaRoute.ACCOUNT_DETAIL,
+                arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+            ) { entry ->
+                val accountId = entry.arguments?.getLong("accountId") ?: 0L
+                AccountDetailScreen(
+                    accountId = accountId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

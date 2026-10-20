@@ -18,6 +18,9 @@ interface AccountDao {
     @Query("SELECT * FROM accounts WHERE id = :id")
     suspend fun findById(id: Long): AccountEntity?
 
+    @Query("SELECT * FROM accounts WHERE id = :id")
+    fun observeById(id: Long): Flow<AccountEntity?>
+
     @Query("SELECT * FROM accounts WHERE name = :name LIMIT 1")
     suspend fun findByName(name: String): AccountEntity?
 

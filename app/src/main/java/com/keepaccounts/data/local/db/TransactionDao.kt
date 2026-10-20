@@ -47,6 +47,34 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL")
     suspend fun countActive(): Int
 
+    /** 某个账户的流水：转出算在 account_id，转入算在 to_account_id，两边都要带上 */
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE deleted_at IS NULL AND (account_id = :accountId OR to_account_id = :accountId)
+        ORDER BY occurred_at DESC, id DESC
+        LIMIT :limit
+        """
+    )
+    fun observeForAccount(accountId: Long, limit: Int): Flow<List<TransactionEntity>>
+
+    /**
+     * 账户维度的收支合计。
+     * 只认 account_id（不含 transfer 的转入端），否则转账会被算成收入。
+     */
+    @Query(
+        """
+        SELECT IFNULL(SUM(amount), 0) FROM transactions
+        WHERE deleted_at IS NULL AND status = 'confirmed'
+          AND account_id = :accountId AND type = :type
+          AND occurred_at BETWEEN :from AND :to
+        """
+    )
+    fun observeAccountSum(accountId: Long, type: String, from: Long, to: Long): Flow<Long>
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL AND account_id = :accountId")
+    suspend fun countByAccount(accountId: Long): Int
+
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun findById(id: Long): TransactionEntity?
 

@@ -43,6 +43,14 @@ class AccountRepository(private val db: AppDatabase) {
 
     suspend fun findById(id: Long): AccountEntity? = accountDao.findById(id)
 
+    fun observeById(id: Long): Flow<AccountEntity?> = accountDao.observeById(id)
+
+    suspend fun nameExists(name: String): Boolean = accountDao.findByName(name) != null
+
+    suspend fun findByName(name: String): AccountEntity? = accountDao.findByName(name)
+
+    suspend fun countActive(): Int = accountDao.countActive()
+
     /**
      * 新建账户。
      * @param balance 有符号余额：储蓄卡给正数，信用卡/花呗给**负数**（负余额即欠款）。
@@ -84,6 +92,37 @@ class AccountRepository(private val db: AppDatabase) {
     suspend fun rename(id: Long, newName: String) {
         val account = accountDao.findById(id) ?: return
         accountDao.update(account.copy(name = newName))
+    }
+
+    /**
+     * 改账户资料。
+     *
+     * **刻意不包含余额**：余额是流水的派生值，只能通过转账/校准/记账改变。
+     * 如果这里允许直接写 current_balance，它和流水表就会永久对不上，
+     * 而且事后查不出是哪一步坏的。要改余额请走 [adjustBalance]。
+     */
+    suspend fun updateProfile(
+        id: Long,
+        name: String,
+        type: String,
+        creditLimit: Long?,
+        billDay: Int?,
+        repayDay: Int?,
+        includeInNetWorth: Boolean,
+        color: String
+    ) {
+        val account = accountDao.findById(id) ?: return
+        accountDao.update(
+            account.copy(
+                name = name,
+                type = type,
+                creditLimit = creditLimit,
+                billDay = billDay,
+                repayDay = repayDay,
+                includeInNetWorth = includeInNetWorth,
+                color = color
+            )
+        )
     }
 
     suspend fun archive(id: Long, archived: Boolean) {
@@ -154,11 +193,10 @@ class AccountRepository(private val db: AppDatabase) {
         }
     }
 
-    /** 删除账户前置校验：有未删除流水时不允许删 */
-    suspend fun canDelete(id: Long): Boolean {
-        val account = accountDao.findById(id) ?: return false
-        return account.currentBalance == 0L
-    }
+    /** 删除账户前置校验：只要还有未删除流水就不允许删，避免账单变成孤儿 */
+    suspend fun canDelete(id: Long): Boolean = txnDao.countByAccount(id) == 0
+
+    suspend fun transactionCount(id: Long): Int = txnDao.countByAccount(id)
 
     suspend fun delete(id: Long) {
         db.withTransaction { accountDao.deleteById(id) }

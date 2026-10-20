@@ -76,22 +76,6 @@ private fun StepPlaceholder(
 }
 
 @Composable
-fun AssetsScreen(container: AppContainer) {
-    StepPlaceholder(
-        title = "资产",
-        step = 2,
-        description = "净资产、总资产、总负债三个数字，以及按「资产 / 负债」分组的账户列表。",
-        planned = listOf(
-            "账户增删改：现金、储蓄卡、信用卡、花呗、网贷、投资",
-            "信用卡记录额度与账单日，余额用负数表示欠款",
-            "转账：两端账户对冲，不计入收支统计",
-            "余额校准：差额自动生成「余额调整」流水",
-            "净资产趋势与资产构成"
-        )
-    )
-}
-
-@Composable
 fun PendingScreen(container: AppContainer) {
     StepPlaceholder(
         title = "待确认",

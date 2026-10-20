@@ -104,14 +104,14 @@ fun LedgerScreen(container: AppContainer) {
         SectionLabel(text = "当前进度")
         KaCard {
             Text(
-                text = "第 1 步 · 工程骨架与数据层",
+                text = "第 2 步 · 账户与资产",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "5 Tab 导航、Room 加密数据库、9 张表、种子数据已完成。" +
-                    "接下来：账户与资产 → 记账与账单 → 回收站与备份 → 通知采集 → 解析引擎。",
+                text = "账户增删改、净资产、信用卡额度、转账、余额校准已经可用。" +
+                    "接下来：记账与账单列表 → 回收站与备份 → 通知采集 → 解析引擎。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 22.sp

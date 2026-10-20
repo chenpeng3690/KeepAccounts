@@ -54,6 +54,15 @@ class TransactionRepository(private val db: AppDatabase) {
     fun observePendingCount(): Flow<Int> =
         txnDao.observeCountByStatus(TxStatus.PENDING)
 
+    fun observeForAccount(accountId: Long, limit: Int = 20): Flow<List<TransactionEntity>> =
+        txnDao.observeForAccount(accountId, limit)
+
+    fun observeAccountMonthExpense(accountId: Long, ts: Long = System.currentTimeMillis()): Flow<Long> =
+        txnDao.observeAccountSum(accountId, TxType.EXPENSE, Time.startOfMonth(ts), Time.endOfMonth(ts))
+
+    fun observeAccountMonthIncome(accountId: Long, ts: Long = System.currentTimeMillis()): Flow<Long> =
+        txnDao.observeAccountSum(accountId, TxType.INCOME, Time.startOfMonth(ts), Time.endOfMonth(ts))
+
     fun observeMonthExpense(ts: Long = System.currentTimeMillis()): Flow<Long> =
         txnDao.observeSum(TxType.EXPENSE, Time.startOfMonth(ts), Time.endOfMonth(ts))
 
