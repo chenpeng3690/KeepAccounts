@@ -30,7 +30,7 @@
 | 数据库 | Room + **SQLCipher** | 数据库文件加密，手机被翻看时账本不裸奔；密钥由 Keystore 包裹 |
 | 依赖注入 | 手写 `AppContainer` | 依赖只有 DB → Repository → UI 一层，Hilt 会引入两个插件 + 注解处理器，是构建链上风险最高的部分 |
 | 构建 | AGP 8.5.2 / Gradle 8.7 / JDK 17 | |
-| 后台任务 | 无（启动时补做） | 不用 WorkManager：缓存里没有该依赖且拉不到 Google Maven。回收站清理与自动备份改为「打开 App 时检查」，代价是长期不打开就不会跑 |
+| 后台任务 | WorkManager | 回收站每日清理、自动备份（默认关闭，周期 1/3/7/30 天） |
 | SDK | minSdk 29、targetSdk 34 | minSdk 29 是 `MediaStore.Downloads` 免权限写公共目录的前提 |
 | 图标 | 手绘 Canvas + material-icons-core | 导航图标自绘；只依赖 core 里的 Add / Search / Close / ArrowBack。**不引 material-icons-extended**：该 artifact 没有发布 1.7.5（只有 1.6.8 / 1.7.0 / 1.7.2 / 1.7.8），与 BOM 2024.10.01 的 1.7.5 对不上会直接解析失败 |
 

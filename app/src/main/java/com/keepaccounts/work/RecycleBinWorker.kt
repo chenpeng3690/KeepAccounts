@@ -8,7 +8,7 @@ import com.keepaccounts.KeepAccountsApp
 /**
  * 回收站到期清理。
  *
- * 保留天数从 settings 读，用户改成 3/7/30 后下一次执行就按新值来，
+ * 保留天数从 settings 读，用户把 7 天改成 3 天后，下一次执行就按新值来，
  * 不需要重新排期 —— 排期只负责"每天跑一次"这件事。
  */
 class RecycleBinWorker(

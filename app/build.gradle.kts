@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.sqlcipher.android)
     ksp(libs.room.compiler)
 
+    implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.security.crypto)
     // 显式提升，避免 16KB 页对齐告警
     implementation(libs.androidx.graphics.path)

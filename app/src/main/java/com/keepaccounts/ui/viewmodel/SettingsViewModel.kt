@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.keepaccounts.core.AppContainer
-import com.keepaccounts.core.Housekeeping
+import com.keepaccounts.core.WorkScheduler
 import com.keepaccounts.data.backup.BackupPreview
 import com.keepaccounts.data.backup.RestoreMode
 import com.keepaccounts.data.backup.RestoreReport
@@ -71,8 +71,9 @@ class SettingsViewModel(
                 autoBackupEnabled = enabled,
                 autoBackupIntervalDays = intervalDays
             )
-            // 没有后台调度，开启后立刻做一次，让用户当场看到它生效
-            if (enabled) Housekeeping.writeAutoBackup(appContext, container)
+            WorkScheduler.scheduleAutoBackup(appContext, if (enabled) intervalDays else 0)
+            // 刚打开时立刻跑一次，让用户当场看到它生效
+            if (enabled) WorkScheduler.runAutoBackupNow(appContext)
         }
     }
 
