@@ -142,6 +142,11 @@ private fun RuleEntity.toJson() = JSONObject().apply {
     put("updatedAt", updatedAt)
 }
 
+private fun AppSettingEntity.toJson() = JSONObject().apply {
+    put("key", key)
+    put("value", value)
+}
+
 private fun BudgetEntity.toJson() = JSONObject().apply {
     put("id", id)
     put("scope", scope)

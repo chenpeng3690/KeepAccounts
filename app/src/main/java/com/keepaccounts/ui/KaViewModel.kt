@@ -22,7 +22,9 @@ fun rememberAppContainer(): AppContainer {
 }
 
 @Composable
-fun <VM : ViewModel> kaViewModel(build: (AppContainer) -> VM): VM {
+inline fun <reified VM : ViewModel> kaViewModel(
+    crossinline build: (AppContainer) -> VM
+): VM {
     val container = rememberAppContainer()
     val provider = remember(container) {
         object : ViewModelProvider.Factory {

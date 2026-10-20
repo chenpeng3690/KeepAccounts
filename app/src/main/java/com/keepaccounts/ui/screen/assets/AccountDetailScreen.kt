@@ -122,59 +122,62 @@ fun AccountDetailScreen(accountId: Long, onBack: () -> Unit) {
                 )
             }
             Spacer(Modifier.height(24.dp))
-            return@Column
-        }
-
-        BalanceCard(account)
-
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionButton("转账", Modifier.weight(1f)) { sheet = DetailSheet.Transfer }
-            ActionButton("校准", Modifier.weight(1f)) { sheet = DetailSheet.Adjust }
-            ActionButton("编辑", Modifier.weight(1f)) { sheet = DetailSheet.Edit }
-        }
-
-        SectionLabel(text = "本月", trailing = Time.formatMonth(System.currentTimeMillis()))
-        KaCard {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Metric("支出", Money.format(state.monthExpense), KaTheme.extra.expense, Modifier.weight(1f))
-                Metric("收入", Money.format(state.monthIncome), KaTheme.extra.income, Modifier.weight(1f))
-                Metric(
-                    "结余",
-                    Money.format(state.monthIncome - state.monthExpense),
-                    MaterialTheme.colorScheme.onSurface,
-                    Modifier.weight(1f)
-                )
-            }
-        }
-
-        SectionLabel(text = "最近流水", trailing = "${state.recent.size} 条")
-        if (state.recent.isEmpty()) {
-            KaCard {
-                Text(
-                    text = "这个账户还没有流水",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         } else {
-            KaCard(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)) {
-                state.recent.forEachIndexed { index, txn ->
-                    if (index > 0) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(MaterialTheme.colorScheme.outlineVariant)
-                        )
-                    }
-                    TxnRow(txn = txn, accountId = accountId)
+
+            BalanceCard(account)
+
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActionButton("转账", Modifier.weight(1f)) { sheet = DetailSheet.Transfer }
+                ActionButton("校准", Modifier.weight(1f)) { sheet = DetailSheet.Adjust }
+                ActionButton("编辑", Modifier.weight(1f)) { sheet = DetailSheet.Edit }
+            }
+
+            SectionLabel(text = "本月", trailing = Time.formatMonth(System.currentTimeMillis()))
+            KaCard {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Metric("支出", Money.format(state.monthExpense), KaTheme.extra.expense, Modifier.weight(1f))
+                    Metric("收入", Money.format(state.monthIncome), KaTheme.extra.income, Modifier.weight(1f))
+                    Metric(
+                        "结余",
+                        Money.format(state.monthIncome - state.monthExpense),
+                        MaterialTheme.colorScheme.onSurface,
+                        Modifier.weight(1f)
+                    )
                 }
             }
-        }
 
-        Spacer(Modifier.height(28.dp))
+            SectionLabel(text = "最近流水", trailing = "${state.recent.size} 条")
+            if (state.recent.isEmpty()) {
+                KaCard {
+                    Text(
+                        text = "这个账户还没有流水",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                KaCard(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)) {
+                    state.recent.forEachIndexed { index, txn ->
+                        if (index > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant)
+                            )
+                        }
+                        TxnRow(txn = txn, accountId = accountId)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+        }
     }
+
+    // 上面已经渲染过空态，这里之后 account 一定非空
+    if (account == null) return
 
     // --- 转账 ---
     if (sheet == DetailSheet.Transfer) {
