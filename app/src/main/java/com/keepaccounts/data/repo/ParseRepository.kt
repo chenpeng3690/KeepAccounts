@@ -6,6 +6,7 @@ import com.keepaccounts.data.local.db.ParseStatus
 import com.keepaccounts.data.local.db.TransactionEntity
 import com.keepaccounts.data.local.db.TxStatus
 import com.keepaccounts.data.parse.ParseEngine
+import com.keepaccounts.notification.FeedbackNotifier
 
 /**
  * 解析工作流的门面：引擎负责「通知 → 账单」，这里补上待确认箱的人工动作
@@ -14,10 +15,11 @@ import com.keepaccounts.data.parse.ParseEngine
 class ParseRepository(
     private val db: AppDatabase,
     private val txnRepo: TransactionRepository,
-    settingsRepo: SettingsRepository
+    settingsRepo: SettingsRepository,
+    feedback: FeedbackNotifier? = null
 ) {
 
-    private val engine = ParseEngine(db, txnRepo, settingsRepo)
+    private val engine = ParseEngine(db, txnRepo, settingsRepo, feedback)
 
     suspend fun processEvent(eventId: Long) = engine.processEvent(eventId)
 

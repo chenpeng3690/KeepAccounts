@@ -1,5 +1,6 @@
 package com.keepaccounts.ui.screen.rules
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,7 +40,8 @@ import com.keepaccounts.util.Time
 @Composable
 fun RuleListScreen(
     onBack: () -> Unit,
-    onOpenLog: () -> Unit
+    onOpenLog: () -> Unit,
+    onNewRule: () -> Unit
 ) {
     val vm = kaViewModel { RuleListViewModel(it) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -89,14 +91,35 @@ fun RuleListScreen(
             Spacer(Modifier.height(10.dp))
         }
 
-        SectionLabel(text = "自定义规则（第 7 步：规则向导）")
+        SectionLabel(text = "自定义规则")
         if (state.rules.none { !it.builtin }) {
             KaCard {
                 Text(
-                    text = "还没有自定义规则。等第 7 步做完，你可以「贴一条通知、点一下金额」就生成专属规则，不用碰任何语法。",
+                    text = "还没有自定义规则。贴一条通知、点一下金额，就能给某个应用生成专属规则，让自动记账越来越准。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(Modifier.height(12.dp))
+                Surface(
+                    onClick = onNewRule,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "新建规则",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
             }
         } else {
             state.rules.filter { !it.builtin }.forEach { rule ->
@@ -105,6 +128,26 @@ fun RuleListScreen(
                     onToggle = { vm.toggle(rule.id, rule.state == RuleState.ACTIVE) }
                 )
                 Spacer(Modifier.height(10.dp))
+            }
+            Surface(
+                onClick = onNewRule,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+ 新建规则",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 

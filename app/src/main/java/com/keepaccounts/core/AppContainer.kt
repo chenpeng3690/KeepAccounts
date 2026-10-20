@@ -9,6 +9,7 @@ import com.keepaccounts.data.repo.CategoryRepository
 import com.keepaccounts.data.backup.BackupRepository
 import com.keepaccounts.data.repo.SettingsRepository
 import com.keepaccounts.notification.NotificationGate
+import com.keepaccounts.notification.FeedbackNotifier
 import com.keepaccounts.data.parse.BuiltinRules
 import com.keepaccounts.data.repo.ParseRepository
 import com.keepaccounts.data.repo.TransactionRepository
@@ -38,7 +39,8 @@ class AppContainer(context: Context) {
     val txnRepo: TransactionRepository by lazy { TransactionRepository(db) }
     val settingsRepo: SettingsRepository by lazy { SettingsRepository(db) }
     val backupRepo: BackupRepository by lazy { BackupRepository(db) }
-    val parseRepo: ParseRepository by lazy { ParseRepository(db, txnRepo, settingsRepo) }
+    val parseRepo: ParseRepository by lazy { ParseRepository(db, txnRepo, settingsRepo, feedbackNotifier) }
+    val feedbackNotifier: FeedbackNotifier by lazy { FeedbackNotifier(this, appContext) }
 
     /** 首帧之前先把种子数据准备好，避免首页闪一下空列表 */
     fun bootstrap() {

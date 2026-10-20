@@ -97,4 +97,10 @@ object SettingKeys {
     const val CAPTURE_ALL = "capture_all_apps"
     /** 通用兜底规则开关，默认开。关闭后白名单内没有专属规则的应用不再解析 */
     const val GENERIC_RULE_ENABLED = "generic_rule_enabled"
+    /** 静音时段开关，默认开 */
+    const val QUIET_ENABLED = "quiet_enabled"
+    /** 静音时段起（HH:mm），默认 23:00 */
+    const val QUIET_START = "quiet_start"
+    /** 静音时段止（HH:mm），默认 07:00 */
+    const val QUIET_END = "quiet_end"
 }

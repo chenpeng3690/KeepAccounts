@@ -15,9 +15,13 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,6 +35,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.keepaccounts.core.AppContainer
+import com.keepaccounts.notification.FeedbackEvent
 import com.keepaccounts.ui.screen.StatsScreen
 import com.keepaccounts.ui.screen.assets.AccountDetailScreen
 import com.keepaccounts.ui.screen.assets.AssetsScreen
@@ -41,6 +46,7 @@ import com.keepaccounts.ui.screen.parselog.ParseLogScreen
 import com.keepaccounts.ui.screen.pending.PendingScreen
 import com.keepaccounts.ui.screen.raw.RawEventsScreen
 import com.keepaccounts.ui.screen.rules.RuleListScreen
+import com.keepaccounts.ui.screen.rules.RuleWizardScreen
 import com.keepaccounts.ui.screen.search.SearchScreen
 import com.keepaccounts.ui.screen.settings.SettingsScreen
 import com.keepaccounts.ui.screen.trash.TrashScreen
@@ -75,6 +81,7 @@ object KaRoute {
     const val RAW_EVENTS = "raw_events"
     const val RULES = "rules"
     const val PARSE_LOG = "parse_log"
+    const val RULE_WIZARD = "rule_wizard"
 
     fun accountDetail(id: Long) = "account/$id"
 
@@ -94,8 +101,20 @@ fun AppRoot(container: AppContainer) {
     // 二级页面不显示底部导航，否则详情页会像"还停在一级"
     val showBottomBar = KaTab.entries.any { it.route == currentRoute }
 
+    // 前台时的记账浮悬提示：解析引擎发事件，这里用 Snackbar 展示
+    val snackbarHostState = remember { SnackbarHostState() }
+    val feedback = container.feedbackNotifier
+    LaunchedEffect(feedback) {
+        feedback.snackbars.collect { event ->
+            when (event) {
+                is FeedbackEvent.Snackbar -> snackbarHostState.showSnackbar(event.text)
+            }
+        }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
@@ -200,8 +219,13 @@ fun AppRoot(container: AppContainer) {
             composable(KaRoute.RULES) {
                 RuleListScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenLog = { navController.navigate(KaRoute.PARSE_LOG) }
+                    onOpenLog = { navController.navigate(KaRoute.PARSE_LOG) },
+                    onNewRule = { navController.navigate(KaRoute.RULE_WIZARD) }
                 )
+            }
+
+            composable(KaRoute.RULE_WIZARD) {
+                RuleWizardScreen(onBack = { navController.popBackStack() })
             }
 
             composable(KaRoute.PARSE_LOG) {

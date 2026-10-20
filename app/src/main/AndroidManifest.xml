@@ -9,6 +9,9 @@
     -->
     <!-- <uses-permission android:name="android.permission.INTERNET" /> -->
 
+    <!-- 记账浮悬提示需要发通知（Android 13+ 运行时申请，拒绝时静默降级） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!--
       列出可启动应用需要可见性声明（Android 11+）。只声明这一个 intent，
       比申请 QUERY_ALL_PACKAGES 温和。
@@ -52,6 +55,11 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- 浮悬提示的撤销 / 确认动作按钮 -->
+        <receiver
+            android:name=".notification.FeedbackActionReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

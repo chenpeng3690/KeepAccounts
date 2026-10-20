@@ -1,5 +1,7 @@
 package com.keepaccounts.ui.screen.settings
 
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -101,6 +103,11 @@ fun SettingsScreen(
             pendingPassword = null
         }
     }
+
+    // 记账提示横幅需要通知权限（Android 13+）；拒绝时静默降级，不反复弹
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* 结果不处理：拒绝就降级为不提示 */ }
 
     val openLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -233,15 +240,104 @@ fun SettingsScreen(
             )
         }
 
+        // ---------- 记账提示 ----------
+        SectionLabel(text = "记账提示")
+        SettingGroup {
+            Text(
+                text = "自动记账后，在别的 App 上层弹一条横幅告诉你记了什么。",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("all" to "全部提示", "success_only" to "仅成功入账", "off" to "不提示").forEach { (level, label) ->
+                    val selected = state.feedbackLevel == level
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(
+                                if (selected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .clickable {
+                                vm.setFeedbackLevel(level)
+                                if (level != "off" && Build.VERSION.SDK_INT >= 33) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                            }
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = "静音时段",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "这段时间内不弹横幅，只静默投递到通知栏",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                androidx.compose.material3.Switch(
+                    checked = state.quietEnabled,
+                    onCheckedChange = { vm.setQuiet(it) }
+                )
+            }
+            if (state.quietEnabled) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = state.quietStart,
+                        onValueChange = { vm.setQuiet(true, start = it) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("开始", style = MaterialTheme.typography.bodySmall) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField(
+                        value = state.quietEnd,
+                        onValueChange = { vm.setQuiet(true, end = it) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("结束", style = MaterialTheme.typography.bodySmall) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                }
+            }
+        }
+
         // ---------- 其他 ----------
         SectionLabel(text = "其他")
         SettingGroup {
             SettingRow(title = "深色模式", value = "跟随系统", enabled = false)
-            SettingRow(
-                title = "记账提示",
-                value = "第 7 步接上",
-                enabled = false
-            )
         }
 
         Spacer(Modifier.height(18.dp))

@@ -25,6 +25,10 @@ data class SettingsUiState(
     val autoBackupIntervalDays: Int = 7,
     val lastBackupAt: Long? = null,
     val whitelist: Set<String> = emptySet(),
+    val feedbackLevel: String = "all",
+    val quietEnabled: Boolean = true,
+    val quietStart: String = "23:00",
+    val quietEnd: String = "07:00",
     val busy: Boolean = false,
     val message: String? = null,
     val loaded: Boolean = false
@@ -55,6 +59,10 @@ class SettingsViewModel(
                 autoBackupIntervalDays = interval,
                 lastBackupAt = last,
                 whitelist = NotificationGate.snapshot(),
+                feedbackLevel = container.settingsRepo.get(SettingKeys.FEEDBACK_LEVEL) ?: "all",
+                quietEnabled = container.settingsRepo.getBoolean(SettingKeys.QUIET_ENABLED, true),
+                quietStart = container.settingsRepo.get(SettingKeys.QUIET_START) ?: "23:00",
+                quietEnd = container.settingsRepo.get(SettingKeys.QUIET_END) ?: "07:00",
                 loaded = true
             )
         }
@@ -87,6 +95,27 @@ class SettingsViewModel(
                 autoBackupIntervalDays = intervalDays
             )
             WorkScheduler.scheduleAutoBackup(appContext, if (enabled) intervalDays else 0)
+        }
+    }
+
+    /** 记账提示三档：all / success_only / off */
+    fun setFeedbackLevel(level: String) {
+        viewModelScope.launch {
+            container.settingsRepo.put(SettingKeys.FEEDBACK_LEVEL, level)
+            _state.value = _state.value.copy(feedbackLevel = level)
+        }
+    }
+
+    fun setQuiet(enabled: Boolean, start: String? = null, end: String? = null) {
+        viewModelScope.launch {
+            container.settingsRepo.put(SettingKeys.QUIET_ENABLED, enabled.toString())
+            if (start != null) container.settingsRepo.put(SettingKeys.QUIET_START, start)
+            if (end != null) container.settingsRepo.put(SettingKeys.QUIET_END, end)
+            _state.value = _state.value.copy(
+                quietEnabled = enabled,
+                quietStart = start ?: _state.value.quietStart,
+                quietEnd = end ?: _state.value.quietEnd
+            )
         }
     }
 

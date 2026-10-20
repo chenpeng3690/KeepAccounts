@@ -13,6 +13,7 @@ import com.keepaccounts.data.local.db.TxType
 import com.keepaccounts.data.repo.SettingsRepository
 import com.keepaccounts.data.repo.TransactionRepository
 import com.keepaccounts.data.repo.TxnDraft
+import com.keepaccounts.notification.FeedbackNotifier
 
 /**
  * 解析管线。
@@ -27,7 +28,8 @@ import com.keepaccounts.data.repo.TxnDraft
 class ParseEngine(
     private val db: AppDatabase,
     private val txnRepo: TransactionRepository,
-    private val settingsRepo: SettingsRepository
+    private val settingsRepo: SettingsRepository,
+    private val feedback: FeedbackNotifier? = null
 ) {
 
     private val rawDao = db.rawEventDao()
@@ -121,8 +123,8 @@ class ParseEngine(
 
         val occurredAt = event.postedAt.takeIf { it > 0 } ?: now
 
-        db.withTransaction {
-            val txnId = txnRepo.insertWithinTransaction(
+        val txnId = db.withTransaction {
+            val id = txnRepo.insertWithinTransaction(
                 TxnDraft(
                     type = direction ?: TxType.EXPENSE,
                     amount = amount,
@@ -139,10 +141,18 @@ class ParseEngine(
                 )
             )
             val parseStatus = if (status == TxStatus.CONFIRMED) ParseStatus.MATCHED else ParseStatus.PENDING
-            rawDao.updateResult(event.id, parseStatus, null, if (isGeneric) null else rule.id, txnId)
+            rawDao.updateResult(event.id, parseStatus, null, if (isGeneric) null else rule.id, id)
             if (!isGeneric) {
                 ruleDao.recordHit(rule.id, now)
                 if (status == TxStatus.CONFIRMED) ruleDao.recordConfirm(rule.id, now)
+            }
+            id
+        }
+
+        // 浮悬提示：付款时人不在本 App 里，靠横幅把结果送过去
+        feedback?.let { fb ->
+            txnRepo.findById(txnId)?.let { saved ->
+                if (status == TxStatus.CONFIRMED) fb.onAutoPosted(saved) else fb.onPending(saved)
             }
         }
     }
