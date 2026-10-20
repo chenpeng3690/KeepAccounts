@@ -75,6 +75,29 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE deleted_at IS NULL AND account_id = :accountId")
     suspend fun countByAccount(accountId: Long): Int
 
+    /**
+     * 搜索。用「空值即不筛选」的写法，避免在 DAO 里拼动态 SQL。
+     * keyword 传 ""、type 传 ""、accountId 传 0 表示该条件不生效。
+     */
+    @Query(
+        """
+        SELECT * FROM transactions
+        WHERE deleted_at IS NULL
+          AND (:keyword = '' OR merchant LIKE '%' || :keyword || '%' OR note LIKE '%' || :keyword || '%')
+          AND (:type = '' OR type = :type)
+          AND (:accountId = 0 OR account_id = :accountId OR to_account_id = :accountId)
+          AND occurred_at >= :from AND occurred_at <= :to
+        ORDER BY occurred_at DESC, id DESC
+        """
+    )
+    fun search(
+        keyword: String,
+        type: String,
+        accountId: Long,
+        from: Long,
+        to: Long
+    ): Flow<List<TransactionEntity>>
+
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun findById(id: Long): TransactionEntity?
 

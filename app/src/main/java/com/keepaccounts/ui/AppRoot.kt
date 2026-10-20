@@ -31,12 +31,15 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.keepaccounts.core.AppContainer
-import com.keepaccounts.ui.screen.LedgerScreen
 import com.keepaccounts.ui.screen.PendingScreen
 import com.keepaccounts.ui.screen.SettingsScreen
 import com.keepaccounts.ui.screen.StatsScreen
 import com.keepaccounts.ui.screen.assets.AccountDetailScreen
 import com.keepaccounts.ui.screen.assets.AssetsScreen
+import com.keepaccounts.ui.screen.category.CategoryManageScreen
+import com.keepaccounts.ui.screen.entry.EntryScreen
+import com.keepaccounts.ui.screen.ledger.LedgerScreen
+import com.keepaccounts.ui.screen.search.SearchScreen
 
 /**
  * 底部导航固定 5 个，顺序不能改：账单 / 资产 / 待确认 / 统计 / 设置。
@@ -59,7 +62,14 @@ enum class KaTab(
 /** 二级页面的路由，不进底部导航 */
 object KaRoute {
     const val ACCOUNT_DETAIL = "account/{accountId}"
+    const val ENTRY = "entry?txnId={txnId}"
+    const val SEARCH = "search"
+    const val CATEGORIES = "categories"
+
     fun accountDetail(id: Long) = "account/$id"
+
+    /** txnId 传 null 表示新建 */
+    fun entry(txnId: Long? = null) = "entry?txnId=${txnId ?: -1L}"
 }
 
 @Composable
@@ -141,7 +151,13 @@ fun AppRoot(container: AppContainer) {
             startDestination = KaTab.Ledger.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(KaTab.Ledger.route) { LedgerScreen(container) }
+            composable(KaTab.Ledger.route) {
+                LedgerScreen(
+                    onOpenEntry = { navController.navigate(KaRoute.entry()) },
+                    onOpenTxn = { id -> navController.navigate(KaRoute.entry(id)) },
+                    onOpenSearch = { navController.navigate(KaRoute.SEARCH) }
+                )
+            }
             composable(KaTab.Assets.route) {
                 AssetsScreen(
                     onOpenAccount = { id -> navController.navigate(KaRoute.accountDetail(id)) }
@@ -150,6 +166,34 @@ fun AppRoot(container: AppContainer) {
             composable(KaTab.Pending.route) { PendingScreen(container) }
             composable(KaTab.Stats.route) { StatsScreen(container) }
             composable(KaTab.Settings.route) { SettingsScreen(container) }
+
+            composable(
+                route = KaRoute.ENTRY,
+                arguments = listOf(
+                    navArgument("txnId") {
+                        type = NavType.LongType
+                        defaultValue = -1L
+                    }
+                )
+            ) { entry ->
+                val txnId = entry.arguments?.getLong("txnId") ?: -1L
+                EntryScreen(
+                    txnId = txnId.takeIf { it > 0 },
+                    onClose = { navController.popBackStack() },
+                    onManageCategories = { navController.navigate(KaRoute.CATEGORIES) }
+                )
+            }
+
+            composable(KaRoute.SEARCH) {
+                SearchScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenTxn = { id -> navController.navigate(KaRoute.entry(id)) }
+                )
+            }
+
+            composable(KaRoute.CATEGORIES) {
+                CategoryManageScreen(onBack = { navController.popBackStack() })
+            }
 
             composable(
                 route = KaRoute.ACCOUNT_DETAIL,
