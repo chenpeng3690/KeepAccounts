@@ -1,0 +1,12 @@
+<resources>
+    <!--
+      Compose 项目里这个主题只负责窗口底色与系统栏配色，界面颜色全部由 ui/theme 决定。
+      刻意不启用 edge-to-edge：自用工具不需要那点沉浸感，省掉一整套 insets 处理带来的边角 bug。
+    -->
+    <style name="Theme.KeepAccounts" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#F2F3F6</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">#F2F3F6</item>
+    </style>
+</resources>

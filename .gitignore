@@ -1,0 +1,23 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+app/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Gradle wrapper 的可执行 jar 不入库：它是二进制，且 Android Studio 打开
+# 项目时会自动补全。clone 后若缺，执行 `gradle wrapper` 或让 AS 重新生成。
+gradle/wrapper/gradle-wrapper.jar
+
+# Room 的 schema 快照要提交（迁移验证依赖它），不要忽略 app/schemas
+
+# 账本导出文件不进版本控制
+*.kabak
+
+# 工具内部目录（会话记忆等），不进版本控制
+.workbuddy/

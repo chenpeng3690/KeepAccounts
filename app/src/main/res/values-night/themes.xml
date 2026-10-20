@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.KeepAccounts" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#0E1116</item>
+        <item name="android:navigationBarColor">#171B22</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">#0E1116</item>
+    </style>
+</resources>
