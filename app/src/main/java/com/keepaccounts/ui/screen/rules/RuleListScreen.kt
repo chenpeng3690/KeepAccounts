@@ -1,7 +1,9 @@
 package com.keepaccounts.ui.screen.rules
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +30,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +47,10 @@ import com.keepaccounts.ui.component.LetterAvatar
 import com.keepaccounts.ui.component.SectionLabel
 import com.keepaccounts.ui.kaViewModel
 import com.keepaccounts.ui.viewmodel.RuleListViewModel
+
+private val MY_COLORS = listOf(
+    "#B85C00", "#C92A2A", "#4B4B9E", "#0CA678", "#1668C4", "#A9640A"
+)
 
 @Composable
 fun RuleListScreen(
@@ -57,7 +68,6 @@ fun RuleListScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
-            // nav：返回 + 标题 + 新建
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -92,14 +102,18 @@ fun RuleListScreen(
 
             // 内置规则
             SectionLabel(text = "内置规则", trailing = "不可删除")
-            RuleGroup(state.rules.filter { it.builtin && it.packageName != null }, vm::toggle)
+            RuleGroup(
+                rules = state.rules.filter { it.builtin && it.packageName != null },
+                vm = vm
+            )
 
             // 我的规则
             SectionLabel(text = "我的规则")
-            if (state.rules.none { !it.builtin }) {
+            val myRules = state.rules.filter { !it.builtin }
+            if (myRules.isEmpty()) {
                 EmptyRules(onNewRule)
             } else {
-                RuleGroup(state.rules.filter { !it.builtin }, vm::toggle)
+                RuleGroup(rules = myRules, vm = vm)
             }
 
             // 兜底
@@ -110,35 +124,33 @@ fun RuleListScreen(
                 color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 1.dp
             ) {
-                Column(Modifier.padding(horizontal = 14.dp)) {
-                    val generic = state.rules.firstOrNull { it.packageName == null }
-                    if (generic != null) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 11.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            LetterAvatar(text = "通", colorHex = "#6B7280", size = 36.dp)
-                            Spacer(Modifier.width(11.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = "通用规则",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "命中后进入待确认，不会直接记账",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = generic.state != RuleState.DISABLED,
-                                onCheckedChange = { vm.toggle(generic.id, generic.state == RuleState.ACTIVE) }
+                val generic = state.rules.firstOrNull { it.packageName == null }
+                if (generic != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LetterAvatar(text = "通", colorHex = "#6B7280", size = 36.dp)
+                        Spacer(Modifier.width(11.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = "通用规则",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "命中后进入待确认，不会直接记账",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Switch(
+                            checked = generic.state == RuleState.ACTIVE,
+                            onCheckedChange = { vm.toggle(generic.id, generic.state) }
+                        )
                     }
                 }
             }
@@ -181,7 +193,7 @@ fun RuleListScreen(
 }
 
 @Composable
-private fun RuleGroup(rules: List<RuleEntity>, onToggle: (Long, Boolean) -> Unit) {
+private fun RuleGroup(rules: List<RuleEntity>, vm: RuleListViewModel) {
     if (rules.isEmpty()) return
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -190,15 +202,33 @@ private fun RuleGroup(rules: List<RuleEntity>, onToggle: (Long, Boolean) -> Unit
         shadowElevation = 1.dp
     ) {
         Column(Modifier.padding(horizontal = 14.dp)) {
-            rules.forEach { rule ->
-                RuleRow(rule, onToggle)
+            rules.forEachIndexed { index, rule ->
+                RuleRow(
+                    rule = rule,
+                    colorHex = ruleColor(rule, index),
+                    vm = vm
+                )
             }
         }
     }
 }
 
+private fun ruleColor(rule: RuleEntity, index: Int): String = when {
+    rule.packageName == "com.tencent.mm" -> "#067A57"
+    rule.packageName == "com.eg.android.AlipayGphone" -> "#1A63D8"
+    rule.packageName == null -> "#6B7280"
+    else -> MY_COLORS[index % MY_COLORS.size]
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RuleRow(rule: RuleEntity, onToggle: (Long, Boolean) -> Unit) {
+private fun RuleRow(
+    rule: RuleEntity,
+    colorHex: String,
+    vm: RuleListViewModel
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+
     val (badgeText, badgeStyle) = when (rule.state) {
         RuleState.ACTIVE -> "已启用" to KaBadgeStyle.ON
         RuleState.OBSERVING -> "观察中" to KaBadgeStyle.WATCH
@@ -215,34 +245,60 @@ private fun RuleRow(rule: RuleEntity, onToggle: (Long, Boolean) -> Unit) {
             "近 7 天命中 ${rule.hitCount} 条"
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle(rule.id, rule.state == RuleState.ACTIVE) }
-            .padding(vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LetterAvatar(text = rule.name.take(1), colorHex = "#3B5BDB", size = 36.dp)
-        Spacer(Modifier.width(11.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = rule.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stats,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = { vm.toggle(rule.id, rule.state) },
+                    onLongClick = { menuOpen = true }
+                )
+                .padding(vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LetterAvatar(text = rule.name.take(1), colorHex = colorHex, size = 36.dp)
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = rule.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = stats,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            KaBadge(badgeText, badgeStyle)
         }
-        Spacer(Modifier.width(8.dp))
-        KaBadge(badgeText, badgeStyle)
+
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            if (rule.state == RuleState.OBSERVING) {
+                DropdownMenuItem(
+                    text = { Text("立即启用") },
+                    onClick = {
+                        menuOpen = false
+                        vm.activate(rule.id)
+                    }
+                )
+            }
+            if (!rule.builtin) {
+                DropdownMenuItem(
+                    text = { Text("删除", color = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        menuOpen = false
+                        vm.delete(rule.id)
+                    }
+                )
+            }
+        }
     }
 }
 

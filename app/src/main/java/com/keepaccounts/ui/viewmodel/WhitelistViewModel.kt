@@ -19,6 +19,7 @@ data class WhitelistUiState(
     val apps: List<InstalledApp> = emptyList(),
     val selected: Set<String> = emptySet(),
     val captureAll: Boolean = false,
+    val genericRuleEnabled: Boolean = true,
     val query: String = "",
     val loaded: Boolean = false
 ) {
@@ -54,6 +55,7 @@ class WhitelistViewModel(
                 apps = (installed + missing).sortedBy { it.label },
                 selected = selected,
                 captureAll = captureAll,
+                genericRuleEnabled = container.settingsRepo.getBoolean(SettingKeys.GENERIC_RULE_ENABLED, true),
                 loaded = true
             )
         }
@@ -80,6 +82,14 @@ class WhitelistViewModel(
 
     fun setCaptureAll(value: Boolean) {
         persist(_state.value.selected, value)
+    }
+
+    /** 通用兜底规则总开关：关闭后，没有专属规则的应用不再解析 */
+    fun setGenericRule(enabled: Boolean) {
+        _state.value = _state.value.copy(genericRuleEnabled = enabled)
+        viewModelScope.launch {
+            container.settingsRepo.put(SettingKeys.GENERIC_RULE_ENABLED, enabled.toString())
+        }
     }
 
     private fun persist(selected: Set<String>, captureAll: Boolean) {

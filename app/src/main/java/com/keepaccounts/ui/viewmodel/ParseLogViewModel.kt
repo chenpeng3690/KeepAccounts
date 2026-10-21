@@ -20,17 +20,21 @@ enum class LogFilter(val label: String) {
 data class ParseLogUiState(
     val items: List<RawEventEntity> = emptyList(),
     val filter: LogFilter = LogFilter.ALL,
+    /** null = 全部应用 */
+    val appFilter: String? = null,
+    val apps: List<String> = emptyList(),
     val loaded: Boolean = false
 )
 
 class ParseLogViewModel(private val container: AppContainer) : ViewModel() {
 
     private val filter = MutableStateFlow(LogFilter.ALL)
+    private val appFilter = MutableStateFlow<String?>(null)
 
     private val recent = container.db.rawEventDao().observeRecent(500)
 
-    val state: StateFlow<ParseLogUiState> = combine(recent, filter) { events, current ->
-        val items = when (current) {
+    val state: StateFlow<ParseLogUiState> = combine(recent, filter, appFilter) { events, current, app ->
+        val statusFiltered = when (current) {
             LogFilter.ALL -> events
             LogFilter.MATCHED -> events.filter { it.parseStatus == "matched" }
             LogFilter.PENDING -> events.filter { it.parseStatus == "pending" }
@@ -39,7 +43,15 @@ class ParseLogViewModel(private val container: AppContainer) : ViewModel() {
                 it.parseStatus == "rejected" || it.parseStatus == "unmatched"
             }
         }
-        ParseLogUiState(items = items, filter = current, loaded = true)
+        val items = if (app == null) statusFiltered
+        else statusFiltered.filter { (it.appLabel ?: it.packageName) == app }
+        ParseLogUiState(
+            items = items,
+            filter = current,
+            appFilter = app,
+            apps = events.map { it.appLabel ?: it.packageName }.distinct(),
+            loaded = true
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -48,5 +60,9 @@ class ParseLogViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setFilter(value: LogFilter) {
         filter.value = value
+    }
+
+    fun setAppFilter(app: String?) {
+        appFilter.value = app
     }
 }

@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepaccounts.data.local.db.CategoryType
 import com.keepaccounts.data.local.db.RawEventEntity
@@ -322,16 +325,40 @@ private fun StepFields(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        SectionLabel(text = "原文")
+        Text(
+            text = "这笔钱是多少？花给谁了？",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = "直接点下面通知里的数字和名字就行，不用写任何规则。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+
+        // 原文
         KaCard {
             Text(
                 text = sample,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 22.sp
             )
         }
 
-        SectionLabel(text = "哪段是金额？（点一下确认）")
+        // 抽取结果 tagline
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FieldTag("金额 ${amount?.let { Money.format(it) } ?: "未识别"}", Color(0xFF3B5BDB))
+            FieldTag("商户 ${merchant.ifBlank { "未识别" }}", Color(0xFF067A57))
+            FieldTag("时间 用通知时间", Color(0xFF6B7280))
+        }
+
+        // 金额候选（点一下确认）
+        SectionLabel(text = "哪段是金额？点一下确认")
         if (candidates.isEmpty()) {
             Text(
                 text = "没识别到金额，回到上一步换一条含 ¥ 或「元」的样例",
@@ -364,17 +391,37 @@ private fun StepFields(
             }
         }
 
-        SectionLabel(text = "商户（可改）")
-        KaField(value = merchant, onValueChange = onMerchant, label = "商户", placeholder = "瑞幸咖啡")
-
-        SectionLabel(text = "固定文案（识别这条通知的锚点）")
-        KaField(value = anchor, onValueChange = onAnchor, label = "锚点词", placeholder = "支付成功")
+        SectionLabel(text = "还可以补充")
+        KaField(value = anchor, onValueChange = onAnchor, label = "固定文案", placeholder = "支付成功")
         Spacer(Modifier.height(6.dp))
         Text(
             text = "规则靠这段固定文案判断「这是不是同一种通知」。改版后这段变了，规则就会失配。",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun FieldTag(text: String, color: Color) {
+    Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.12f)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(color, CircleShape)
+            )
+            Spacer(Modifier.width(5.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = color
+            )
+        }
     }
 }
 
@@ -514,7 +561,20 @@ private fun StepTest(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        SectionLabel(text = "用几条样例验证规则（全部 ✅ 才能保存）")
+        Text(
+            text = "试一下，看准不准",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = "用几条最近收到的通知试跑，全部通过才能保存。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+
         testCases.forEachIndexed { i, text ->
             KaField(
                 value = text,
@@ -550,55 +610,98 @@ private fun StepTest(
         }
 
         if (results.isNotEmpty()) {
-            SectionLabel(text = "结果")
+            Spacer(Modifier.height(14.dp))
             results.forEach { r ->
-                KaCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = if (r.matched) "✅" else "❌",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (r.matched) "匹配" else "不匹配",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (r.matched) KaTheme.extra.income else KaTheme.extra.expense
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = r.input,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (r.matched) {
-                        Spacer(Modifier.height(4.dp))
-                        val dirLabel = when (r.direction) {
-                            TxType.INCOME -> "收入"
-                            TxType.EXPENSE -> "支出"
-                            else -> "方向不明"
-                        }
-                        Text(
-                            text = "金额 ¥${r.amount?.let { Money.format(it) } ?: "-"} · 方向 $dirLabel · 商户 ${r.merchant ?: "未识别"}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = if (r.amount == null) "原因：未找到金额" else "原因：缺少固定文案片段",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = KaTheme.extra.expense
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
+                ResultCard(r)
+                Spacer(Modifier.height(9.dp))
+            }
+            if (results.any { !it.matched }) {
+                WarningCard()
             }
         }
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun ResultCard(r: TestResult) {
+    val ok = r.matched
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(13.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 1.dp
+    ) {
+        Row(modifier = Modifier.padding(11.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(19.dp)
+                    .background(if (ok) Color(0xFFE7F7F1) else Color(0xFFFDECEC), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (ok) Icons.Filled.Check else Icons.Filled.Close,
+                    contentDescription = null,
+                    tint = if (ok) Color(0xFF067A57) else Color(0xFFC92A2A),
+                    modifier = Modifier.size(11.dp)
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = if (ok) "匹配成功" else "没有匹配",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (ok) Color(0xFF067A57) else Color(0xFFC92A2A)
+                )
+                Spacer(Modifier.height(4.dp))
+                if (ok) {
+                    val dirLabel = when (r.direction) {
+                        TxType.INCOME -> "收入"
+                        TxType.EXPENSE -> "支出"
+                        else -> "方向不明"
+                    }
+                    Text(
+                        text = "¥${r.amount?.let { Money.format(it) } ?: "-"} · ${r.merchant ?: "未识别"} · $dirLabel",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        text = if (r.amount == null)
+                            "这条里找不到金额，可能是活动/优惠通知，本来就不该记账。"
+                        else "缺少固定文案片段，检查一下固定文案是否匹配。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WarningCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(13.dp),
+        color = Color(0xFFFFF9EE)
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(
+                text = "这条不匹配是正常的",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF8A5205)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "系统已经把它判定为噪音通知，会和其他活动推送一起自动过滤掉，不影响规则生效。",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF7A4E0B),
+                lineHeight = 17.sp
+            )
+        }
     }
 }
 

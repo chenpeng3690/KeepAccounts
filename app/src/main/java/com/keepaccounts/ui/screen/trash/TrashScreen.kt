@@ -37,6 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.keepaccounts.data.local.db.TxSource
+import com.keepaccounts.data.local.db.TxType
 import com.keepaccounts.ui.component.LetterAvatar
 import com.keepaccounts.ui.kaViewModel
 import com.keepaccounts.ui.theme.KaTheme
@@ -82,9 +84,15 @@ fun TrashScreen(onBack: () -> Unit) {
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = { showRetention = true }) {
-                Text("保留 ${state.retentionDays} 天", style = MaterialTheme.typography.labelMedium)
-            }
+            Text(
+                text = "设置",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable { showRetention = true }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
         }
 
         Box(
@@ -247,6 +255,17 @@ private fun TrashCard(
     val category = txn.categoryId?.let { state.categories[it] }
     val account = state.accounts[txn.accountId]
     val urgent = item.daysLeft <= 2
+    val isAdjustment = txn.source == TxSource.ADJUSTMENT
+    val amountColor = when {
+        isAdjustment -> MaterialTheme.colorScheme.onSurfaceVariant
+        txn.type == TxType.INCOME -> KaTheme.extra.income
+        else -> KaTheme.extra.expense
+    }
+    val sign = when {
+        isAdjustment -> ""
+        txn.type == TxType.INCOME -> "+"
+        else -> "-"
+    }
 
     Column(
         modifier = Modifier
@@ -280,10 +299,10 @@ private fun TrashCard(
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = Money.format(txn.amount),
+                    text = "$sign${Money.format(txn.amount)}",
                     style = MaterialTheme.typography.bodyMedium.merge(TabularNumbers),
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = amountColor
                 )
                 Spacer(Modifier.height(3.dp))
                 Box(

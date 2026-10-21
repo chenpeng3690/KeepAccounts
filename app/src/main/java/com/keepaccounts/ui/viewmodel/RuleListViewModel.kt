@@ -34,8 +34,26 @@ class RuleListViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    /** 开关：ACTIVE <-> DISABLED */
-    fun toggle(id: Long, currentlyActive: Boolean) {
-        setState(id, if (currentlyActive) RuleState.DISABLED else RuleState.ACTIVE)
+    /**
+     * 点击切换：已启用 → 停用；已停用 → 启用；观察中 → 保持不变
+     * （观察中的规则要「确认正确」攒够 3 条才启用，不能一点就启用）。
+     */
+    fun toggle(id: Long, currentState: String) {
+        val next = when (currentState) {
+            RuleState.ACTIVE -> RuleState.DISABLED
+            RuleState.DISABLED -> RuleState.ACTIVE
+            else -> null // OBSERVING：点击不变，靠长按「立即启用」
+        }
+        if (next != null) setState(id, next)
+    }
+
+    /** 观察中 → 立即启用（长按菜单里的选项） */
+    fun activate(id: Long) = setState(id, RuleState.ACTIVE)
+
+    /** 删除自定义规则（内置规则不可删） */
+    fun delete(id: Long) {
+        viewModelScope.launch {
+            runCatching { ruleDao.deleteCustom(id) }
+        }
     }
 }

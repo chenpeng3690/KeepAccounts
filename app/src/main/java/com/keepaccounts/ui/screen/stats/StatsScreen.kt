@@ -67,6 +67,7 @@ fun StatsScreen() {
     val vm = kaViewModel { StatsViewModel(it) }
     val state by vm.state.collectAsStateWithLifecycle()
     var showBudget by remember { mutableStateOf(false) }
+    var showIncome by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -87,29 +88,34 @@ fun StatsScreen() {
                 onNext = { vm.shiftMonth(1) }
             )
             Spacer(Modifier.weight(1f))
-            KaIconButton(Icons.Outlined.FilterList, "筛选") { /* 筛选留待后续 */ }
+            KaIconButton(Icons.Outlined.FilterList, "切换支出/收入") { showIncome = !showIncome }
         }
 
         Trio(income = state.monthIncome, expense = state.monthExpense)
 
-        SectionLabel(text = "支出构成", trailing = "共 ¥${Money.format(state.monthExpense)}")
+        val currentSlices = if (showIncome) state.incomeSlices else state.slices
+        val currentTotal = if (showIncome) state.monthIncome else state.monthExpense
+        SectionLabel(
+            text = if (showIncome) "收入构成" else "支出构成",
+            trailing = "共 ¥${Money.format(currentTotal)}"
+        )
         KaCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 DonutChart(
-                    slices = state.slices,
-                    center = state.monthExpense,
+                    slices = currentSlices,
+                    center = currentTotal,
                     modifier = Modifier.size(118.dp)
                 )
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    if (state.slices.isEmpty()) {
+                    if (currentSlices.isEmpty()) {
                         Text(
-                            text = "本月还没有支出",
+                            text = if (showIncome) "本月还没有收入" else "本月还没有支出",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
-                        state.slices.take(5).forEach { slice -> SliceLegend(slice) }
+                        currentSlices.take(5).forEach { slice -> SliceLegend(slice) }
                     }
                 }
             }

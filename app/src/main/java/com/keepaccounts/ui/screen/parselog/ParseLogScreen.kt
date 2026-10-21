@@ -12,15 +12,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,6 +37,7 @@ import com.keepaccounts.data.local.db.ParseStatus
 import com.keepaccounts.data.local.db.RawEventEntity
 import com.keepaccounts.ui.component.FilterBar
 import com.keepaccounts.ui.component.KaIconButton
+import com.keepaccounts.ui.component.KaSheet
 import com.keepaccounts.ui.kaViewModel
 import com.keepaccounts.ui.theme.KaTheme
 import com.keepaccounts.ui.viewmodel.LogFilter
@@ -42,6 +48,7 @@ import com.keepaccounts.util.Time
 fun ParseLogScreen(onBack: () -> Unit) {
     val vm = kaViewModel { ParseLogViewModel(it) }
     val state by vm.state.collectAsStateWithLifecycle()
+    var showAppFilter by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -64,7 +71,7 @@ fun ParseLogScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.weight(1f))
-            KaIconButton(Icons.Outlined.FilterList, "筛选") { }
+            KaIconButton(Icons.Outlined.FilterList, "按应用筛选") { showAppFilter = true }
         }
 
         FilterBar(
@@ -82,6 +89,55 @@ fun ParseLogScreen(onBack: () -> Unit) {
             }
         }
     }
+
+    if (showAppFilter) {
+        AppFilterSheet(
+            apps = state.apps,
+            current = state.appFilter,
+            onSelect = { app ->
+                vm.setAppFilter(app)
+                showAppFilter = false
+            },
+            onDismiss = { showAppFilter = false }
+        )
+    }
+}
+
+@Composable
+private fun AppFilterSheet(
+    apps: List<String>,
+    current: String?,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    KaSheet(title = "按应用筛选", onDismiss = onDismiss) {
+        // 全部应用
+        AppRow("全部应用", current == null) { onSelect(null) }
+        apps.forEach { app ->
+            AppRow(app, current == app) { onSelect(app) }
+        }
+    }
+}
+
+@Composable
+private fun AppRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+        )
+    }
+    Spacer(Modifier.height(8.dp))
 }
 
 @Composable
