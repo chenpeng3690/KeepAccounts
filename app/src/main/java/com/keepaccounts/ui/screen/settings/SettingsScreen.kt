@@ -15,12 +15,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -34,6 +46,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -45,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepaccounts.data.backup.BackupPreview
 import com.keepaccounts.data.backup.RestoreMode
 import com.keepaccounts.ui.component.KaCard
+import com.keepaccounts.ui.component.KaSheet
 import com.keepaccounts.ui.component.ScreenHeader
 import com.keepaccounts.ui.component.SectionLabel
 import com.keepaccounts.ui.kaViewModel
@@ -84,6 +99,7 @@ fun SettingsScreen(
     var restorePreview by remember { mutableStateOf<BackupPreview?>(null) }
     var restorePassword by remember { mutableStateOf<String?>(null) }
     var errorText by remember { mutableStateOf<String?>(null) }
+    var showFeedback by remember { mutableStateOf(false) }
 
     val createLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
@@ -150,35 +166,65 @@ fun SettingsScreen(
         SettingGroup {
             SettingRow(
                 title = "通知使用权",
-                value = if (granted) "已开启" else "未开启，去授权",
+                value = if (granted) "已开启" else "未开启",
+                icon = Icons.Outlined.Notifications,
+                iconBg = Color(0xFFE7F7F1),
+                iconTint = Color(0xFF067A57),
                 onClick = { NotificationAccess.openListenerSettings(context) }
             )
             SettingRow(
                 title = "应用白名单",
                 value = if (state.whitelist.size > 1) "${state.whitelist.size} 个应用" else "0 个应用",
+                icon = Icons.Outlined.Apps,
+                iconBg = Color(0xFFEEF1FE),
+                iconTint = Color(0xFF3B5BDB),
                 onClick = onOpenWhitelist
+            )
+            SettingRow(
+                title = "解析规则",
+                value = "查看与启停",
+                icon = Icons.Outlined.ReceiptLong,
+                iconBg = Color(0xFFFDF3E3),
+                iconTint = Color(0xFFA9640A),
+                onClick = onOpenRules
+            )
+            SettingRow(
+                title = "记账提示",
+                value = feedbackLabel(state.feedbackLevel),
+                icon = Icons.Outlined.NotificationsActive,
+                iconBg = Color(0xFFEEF1FE),
+                iconTint = Color(0xFF3B5BDB),
+                onClick = { showFeedback = true }
             )
             SettingRow(
                 title = "原始通知",
                 value = "${rawCount} 条样本",
+                icon = Icons.Outlined.ReceiptLong,
+                iconBg = Color(0xFFF1F2F5),
+                iconTint = Color(0xFF6B7280),
                 onClick = onOpenRawEvents
             )
-            SettingRow(title = "解析规则", value = "查看与启停", onClick = onOpenRules)
         }
 
         // ---------- 数据 ----------
         SectionLabel(text = "数据")
         SettingGroup {
             SettingRow(
-                title = "导入账单",
-                value = "微信 / 支付宝 CSV",
-                onClick = onOpenImport
-            )
-            SettingRow(
                 title = "立即备份",
                 value = state.lastBackupAt?.let { "上次 ${formatDateTime(it)}" } ?: "还没有备份过",
+                icon = Icons.Outlined.FileUpload,
+                iconBg = Color(0xFFE8F0FF),
+                iconTint = Color(0xFF1A63D8),
                 enabled = !state.busy,
                 onClick = { showBackupPassword = true }
+            )
+            SettingRow(
+                title = "导入账单",
+                value = "微信 / 支付宝",
+                icon = Icons.Outlined.FileDownload,
+                iconBg = Color(0xFFE7F7F1),
+                iconTint = Color(0xFF067A57),
+                onClick = onOpenImport
             )
             Row(
                 modifier = Modifier
@@ -186,10 +232,25 @@ fun SettingsScreen(
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .background(Color(0xFFE8F0FF), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        tint = Color(0xFF1A63D8),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+                Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = "自动备份",
                         style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
@@ -207,9 +268,15 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                        .padding(start = 51.dp, end = 14.dp, top = 0.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Text(
+                        text = "备份周期",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.weight(1f))
                     listOf(1, 3, 7, 30).forEach { days ->
                         val selected = state.autoBackupIntervalDays == days
                         Box(
@@ -220,7 +287,7 @@ fun SettingsScreen(
                                     else MaterialTheme.colorScheme.surfaceVariant
                                 )
                                 .clickable { vm.setAutoBackup(true, days) }
-                                .padding(horizontal = 14.dp, vertical = 7.dp)
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text(
                                 text = "$days 天",
@@ -236,114 +303,33 @@ fun SettingsScreen(
             SettingRow(
                 title = "从文件恢复",
                 value = "选择 .kabak 文件",
+                icon = Icons.Outlined.FileUpload,
+                iconBg = Color(0xFFE8F0FF),
+                iconTint = Color(0xFF1A63D8),
                 enabled = !state.busy,
                 onClick = { openLauncher.launch(arrayOf("*/*")) }
             )
-            SettingRow(
-                title = "回收站",
-                value = "保留 ${state.retentionDays} 天",
-                onClick = onOpenTrash
-            )
-        }
-
-        // ---------- 记账提示 ----------
-        SectionLabel(text = "记账提示")
-        SettingGroup {
-            Text(
-                text = "自动记账后，在别的 App 上层弹一条横幅告诉你记了什么。",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf("all" to "全部提示", "success_only" to "仅成功入账", "off" to "不提示").forEach { (level, label) ->
-                    val selected = state.feedbackLevel == level
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(9.dp))
-                            .background(
-                                if (selected) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .clickable {
-                                vm.setFeedbackLevel(level)
-                                if (level != "off" && Build.VERSION.SDK_INT >= 33) {
-                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                }
-                            }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = "静音时段",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "这段时间内不弹横幅，只静默投递到通知栏",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                androidx.compose.material3.Switch(
-                    checked = state.quietEnabled,
-                    onCheckedChange = { vm.setQuiet(it) }
-                )
-            }
-            if (state.quietEnabled) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = state.quietStart,
-                        onValueChange = { vm.setQuiet(true, start = it) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("开始", style = MaterialTheme.typography.bodySmall) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                    Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedTextField(
-                        value = state.quietEnd,
-                        onValueChange = { vm.setQuiet(true, end = it) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("结束", style = MaterialTheme.typography.bodySmall) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                }
-            }
         }
 
         // ---------- 其他 ----------
         SectionLabel(text = "其他")
         SettingGroup {
-            SettingRow(title = "深色模式", value = "跟随系统", enabled = false)
+            SettingRow(
+                title = "回收站保留",
+                value = "${state.retentionDays} 天",
+                icon = Icons.Outlined.Delete,
+                iconBg = Color(0xFFFDF3E3),
+                iconTint = Color(0xFFA9640A),
+                onClick = onOpenTrash
+            )
+            SettingRow(
+                title = "深色模式",
+                value = "跟随系统",
+                icon = Icons.Outlined.DarkMode,
+                iconBg = Color(0xFFF0F0FA),
+                iconTint = Color(0xFF4B4B9E),
+                enabled = false
+            )
         }
 
         Spacer(Modifier.height(18.dp))
@@ -364,6 +350,23 @@ fun SettingsScreen(
             )
         }
         Spacer(Modifier.height(28.dp))
+    }
+
+    if (showFeedback) {
+        FeedbackSheet(
+            level = state.feedbackLevel,
+            quietEnabled = state.quietEnabled,
+            quietStart = state.quietStart,
+            quietEnd = state.quietEnd,
+            onSetLevel = { lvl ->
+                vm.setFeedbackLevel(lvl)
+                if (lvl != "off" && Build.VERSION.SDK_INT >= 33) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            },
+            onSetQuiet = { enabled, start, end -> vm.setQuiet(enabled, start, end) },
+            onDismiss = { showFeedback = false }
+        )
     }
 
     if (state.busy) {
@@ -479,6 +482,9 @@ private fun SettingGroup(content: @Composable () -> Unit) {
 private fun SettingRow(
     title: String,
     value: String? = null,
+    icon: ImageVector? = null,
+    iconBg: Color = Color(0xFFF1F2F5),
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
@@ -486,16 +492,33 @@ private fun SettingRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled && onClick != null) { onClick?.invoke() }
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(iconBg, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Spacer(Modifier.width(11.dp))
+        }
         Text(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
             color = if (enabled) MaterialTheme.colorScheme.onSurface
-            else MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
         )
-        Spacer(Modifier.weight(1f))
         if (value != null) {
             Text(
                 text = value,
@@ -510,6 +533,100 @@ private fun SettingRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+private fun feedbackLabel(level: String): String = when (level) {
+    "success_only" -> "仅成功入账"
+    "off" -> "不提示"
+    else -> "全部提示"
+}
+
+@Composable
+private fun FeedbackSheet(
+    level: String,
+    quietEnabled: Boolean,
+    quietStart: String,
+    quietEnd: String,
+    onSetLevel: (String) -> Unit,
+    onSetQuiet: (Boolean, String?, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    KaSheet(title = "记账提示", onDismiss = onDismiss, subtitle = "自动记账后，在别的 App 上层弹一条横幅") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("all" to "全部提示", "success_only" to "仅成功入账", "off" to "不提示").forEach { (lvl, label) ->
+                val selected = level == lvl
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(
+                            if (selected) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        .clickable { onSetLevel(lvl) }
+                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "静音时段",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "这段时间内不弹横幅，只静默投递到通知栏",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            androidx.compose.material3.Switch(
+                checked = quietEnabled,
+                onCheckedChange = { onSetQuiet(it, null, null) }
+            )
+        }
+        if (quietEnabled) {
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = quietStart,
+                    onValueChange = { onSetQuiet(true, it, null) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text("开始", style = MaterialTheme.typography.bodySmall) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp)
+                )
+                Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = quietEnd,
+                    onValueChange = { onSetQuiet(true, null, it) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text("结束", style = MaterialTheme.typography.bodySmall) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp)
+                )
+            }
         }
     }
 }

@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,15 +38,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepaccounts.data.local.db.AccountEntity
 import com.keepaccounts.data.local.db.CategoryEntity
 import com.keepaccounts.data.local.db.CategoryType
+import com.keepaccounts.data.local.db.RawEventEntity
 import com.keepaccounts.data.local.db.TransactionEntity
 import com.keepaccounts.data.local.db.TxType
+import com.keepaccounts.ui.component.KaBadge
+import com.keepaccounts.ui.component.KaBadgeStyle
 import com.keepaccounts.ui.component.KaCard
 import com.keepaccounts.ui.component.KaChips
 import com.keepaccounts.ui.component.KaField
 import com.keepaccounts.ui.component.KaSheet
 import com.keepaccounts.ui.component.KaSheetActions
 import com.keepaccounts.ui.component.LetterAvatar
-import com.keepaccounts.ui.component.ScreenHeader
+import com.keepaccounts.ui.component.MiniButton
 import com.keepaccounts.ui.component.SectionLabel
 import com.keepaccounts.ui.kaViewModel
 import com.keepaccounts.ui.theme.KaTheme
@@ -67,30 +73,74 @@ fun PendingScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        ScreenHeader(title = "待确认") {
-            TextButton(onClick = onManageRules) { Text("管理规则") }
+        // nav：标题 + 橙色数量 + 批量处理
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "待确认",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            if (state.items.isNotEmpty()) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "${state.items.size}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = KaTheme.extra.warning
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            if (state.items.isNotEmpty()) {
+                Text(
+                    text = "批量处理",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { vm.confirmAll() }
+                        .padding(4.dp)
+                )
+            }
         }
 
         if (state.items.isEmpty()) {
             EmptyState(
                 matched = state.weekMatched,
                 rejected = state.weekRejected,
-                unmatched = state.weekUnmatched,
                 recentRejects = state.recentRejects,
                 onOpenLog = onOpenLog
             )
         } else {
-            BatchBar(count = state.items.size, onConfirmAll = { vm.confirmAll() })
-            Spacer(Modifier.height(10.dp))
+            // 顶部横幅
+            Banner()
+
             state.items.forEach { item ->
-                PendingCard(
+                PendCard(
                     item = item,
                     onConfirm = { vm.confirm(item.txn.id) },
                     onEdit = { editing = item },
                     onReject = { vm.reject(item.txn.id) }
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(9.dp))
             }
+
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "规则不准？去管理解析规则 ›",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .clickable(onClick = onManageRules)
+                    .padding(vertical = 4.dp)
+            )
         }
         Spacer(Modifier.height(24.dp))
     }
@@ -110,36 +160,25 @@ fun PendingScreen(
 }
 
 @Composable
-private fun BatchBar(count: Int, onConfirmAll: () -> Unit) {
+private fun Banner() {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.primaryContainer
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        shape = RoundedCornerShape(13.dp),
+        color = KaTheme.extra.warning.copy(alpha = 0.10f)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "$count 条待确认",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = "全部确认",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable(onClick = onConfirmAll)
-            )
-        }
+        Text(
+            text = "通用规则猜的，不确定，所以没直接入账。",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF8A5205),
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp)
+        )
     }
 }
 
 @Composable
-private fun PendingCard(
+private fun PendCard(
     item: PendingItem,
     onConfirm: () -> Unit,
     onEdit: () -> Unit,
@@ -147,203 +186,232 @@ private fun PendingCard(
 ) {
     val txn = item.txn
     val isExpense = txn.type == TxType.EXPENSE
-    val amountColor = if (isExpense) KaTheme.extra.expense else KaTheme.extra.income
+    val merchant = txn.merchant
+    val categoryName = item.category?.name
 
-    KaCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
+    KaCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)) {
+        // 头：app 图标 + 应用 · 时间 + 来源 badge
         Row(verticalAlignment = Alignment.CenterVertically) {
             LetterAvatar(text = item.appLabel?.take(1) ?: "?", colorHex = "#3B5BDB", size = 28.dp)
             Spacer(Modifier.width(8.dp))
             Text(
-                text = item.appLabel ?: "未知应用",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                text = "${item.appLabel ?: "未知"} · ${Time.formatTime(txn.occurredAt)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                overflow = TextOverflow.Ellipsis
             )
-            SourceBadge(source = item.source, observing = item.isObserving)
+            when {
+                item.isObserving -> KaBadge("规则观察中", KaBadgeStyle.INFO)
+                item.source == "通用兜底" -> KaBadge("通用规则", KaBadgeStyle.WATCH)
+            }
         }
 
+        // 原文
         item.rawText?.let {
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = (if (isExpense) "-" else "+") + "¥" + Money.format(txn.amount),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = amountColor,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = item.merchantAndCategory(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = buildString {
-                item.account?.let { append(it.name) }
-                append(" · ")
-                append(Time.formatDateTime(txn.occurredAt))
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(Modifier.height(8.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant)
-        )
-        Spacer(Modifier.height(4.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(onClick = onReject) {
-                Text("判为噪音", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onEdit) { Text("修改", color = MaterialTheme.colorScheme.primary) }
-            Spacer(Modifier.width(4.dp))
             Surface(
-                onClick = onConfirm,
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.primary
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(9.dp),
+                color = Color(0xFFF7F8FA)
             ) {
                 Text(
-                    text = "确认入账",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
+
+        // 抽取结果
+        Spacer(Modifier.height(9.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ExtractChip("金额 ${Money.format(txn.amount)}", ChipKind.OK)
+            ExtractChip(
+                merchant?.let { "商户 $it" } ?: "商户 未识别",
+                if (merchant != null) ChipKind.OK else ChipKind.WARN
+            )
+            ExtractChip(if (isExpense) "支出" else "收入", ChipKind.NORMAL)
+            categoryName?.let { ExtractChip(it, ChipKind.NORMAL) }
+        }
+
+        // 操作
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            MiniButton("判为噪音", onClick = onReject, modifier = Modifier.weight(1f), danger = true)
+            MiniButton("修改", onClick = onEdit, modifier = Modifier.weight(1f))
+            MiniButton("确认入账", onClick = onConfirm, modifier = Modifier.weight(1f), primary = true)
+        }
     }
 }
 
+private enum class ChipKind { OK, WARN, NORMAL }
+
 @Composable
-private fun SourceBadge(source: String, observing: Boolean) {
-    val bg = if (observing) KaTheme.extra.warning.copy(alpha = 0.14f)
-    else MaterialTheme.colorScheme.surfaceVariant
-    val fg = if (observing) KaTheme.extra.warning
-    else MaterialTheme.colorScheme.onSurfaceVariant
-    Surface(shape = RoundedCornerShape(6.dp), color = bg) {
+private fun ExtractChip(text: String, kind: ChipKind) {
+    val (bg, fg) = when (kind) {
+        ChipKind.OK -> Color(0xFFE7F7F1) to Color(0xFF067A57)
+        ChipKind.WARN -> Color(0xFFFDF3E3) to Color(0xFF8A5205)
+        ChipKind.NORMAL -> Color(0xFFF4F5F8) to Color(0xFF5B6270)
+    }
+    Surface(shape = RoundedCornerShape(8.dp), color = bg) {
         Text(
-            text = source,
-            style = MaterialTheme.typography.labelSmall,
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
             color = fg,
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
             maxLines = 1
         )
     }
-}
-
-private fun PendingItem.merchantAndCategory(): String {
-    val parts = mutableListOf<String>()
-    txn.merchant?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
-    category?.let { parts.add(it.name) }
-    return if (parts.isEmpty()) "未分类" else parts.joinToString(" · ")
 }
 
 @Composable
 private fun EmptyState(
     matched: Int,
     rejected: Int,
-    unmatched: Int,
-    recentRejects: List<com.keepaccounts.data.local.db.RawEventEntity>,
+    recentRejects: List<RawEventEntity>,
     onOpenLog: () -> Unit
 ) {
-    KaCard {
+    // 对勾 + 标题
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(54.dp)
+                .background(Color(0xFFE7F7F1), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = Color(0xFF0CA678),
+                modifier = Modifier.size(25.dp)
+            )
+        }
+        Spacer(Modifier.height(11.dp))
         Text(
-            text = "没有待确认的账单",
+            text = "都处理完了",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(5.dp))
         Text(
-            text = "最近 7 天解析概况",
-            style = MaterialTheme.typography.bodyMedium,
+            text = "自动记账正常工作中",
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniStat("已记账", matched, KaTheme.extra.income, Modifier.weight(1f))
-            MiniStat("被拦截", rejected, MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
-            MiniStat("未命中", unmatched, MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
+    }
+
+    // 最近 7 天解析情况
+    Spacer(Modifier.height(14.dp))
+    KaCard {
+        Text(
+            text = "最近 7 天解析情况",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(Modifier.height(12.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            WeekStat(matched, "自动入账", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+            WeekDivider()
+            WeekStat(rejected, "已拦噪音", Color(0xFF8A91A0), Modifier.weight(1f))
+            WeekDivider()
+            WeekStat(0, "待确认", Color(0xFF12B886), Modifier.weight(1f))
         }
     }
 
+    // 最近被拦下的通知
     if (recentRejects.isNotEmpty()) {
         SectionLabel(text = "最近被拦下的通知")
-        KaCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+        KaCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 2.dp)) {
             recentRejects.forEach { e ->
-                Column(Modifier.padding(vertical = 8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LetterAvatar(text = (e.appLabel ?: e.packageName).take(1), colorHex = "#3B5BDB", size = 36.dp)
+                    Spacer(Modifier.width(11.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = e.title ?: (e.appLabel ?: e.packageName),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = e.rejectReason ?: "被拦截",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        text = (e.appLabel ?: e.packageName) + " · " + (e.rejectReason ?: ""),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = Time.dayLabel(e.receivedAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
     }
 
-    SectionLabel(text = "想看每条通知为什么被记账或被拦下？")
-    Surface(
-        onClick = onOpenLog,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Text(
-            text = "打开解析日志",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(vertical = 14.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-    }
+    Spacer(Modifier.height(10.dp))
+    Text(
+        text = "查看全部解析日志 ›",
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpenLog)
+            .padding(vertical = 6.dp)
+    )
 }
 
 @Composable
-private fun MiniStat(label: String, value: Int, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
+private fun WeekStat(value: Int, label: String, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = value.toString(),
-            style = MaterialTheme.typography.titleMedium,
+            text = "$value",
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = color
         )
+        Spacer(Modifier.height(2.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+@Composable
+private fun WeekDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(26.dp)
+            .background(Color(0xFFF0F1F5))
+    )
 }
 
 @Composable
@@ -380,8 +448,7 @@ private fun PendingEditSheet(
             onValueChange = { amountText = it },
             label = "金额",
             prefix = "¥",
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
-            isError = error != null
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
         )
         Spacer(Modifier.height(14.dp))
         SectionLabel(text = "分类")

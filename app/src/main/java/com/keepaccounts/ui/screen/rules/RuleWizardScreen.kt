@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,10 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -50,16 +49,13 @@ import com.keepaccounts.ui.component.KaField
 import com.keepaccounts.ui.component.KaSheet
 import com.keepaccounts.ui.component.LetterAvatar
 import com.keepaccounts.ui.component.SectionLabel
+import com.keepaccounts.ui.component.StepBar
 import com.keepaccounts.ui.kaViewModel
 import com.keepaccounts.ui.theme.KaTheme
 import com.keepaccounts.ui.viewmodel.RuleWizardViewModel
 import com.keepaccounts.ui.viewmodel.TestResult
 import com.keepaccounts.util.Money
 import com.keepaccounts.util.Time
-
-private val STEP_TITLES = listOf(
-    "选应用", "贴样例", "点选字段", "确认方向", "默认值", "忽略词", "测试验证", "保存"
-)
 
 @Composable
 fun RuleWizardScreen(onBack: () -> Unit) {
@@ -73,37 +69,42 @@ fun RuleWizardScreen(onBack: () -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 顶栏：返回 + 标题 + 第 X/8 步
+        // 顶栏：关闭 + 标题 + 第 X/8 步
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { if (state.step == 0) onBack() else vm.back() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = STEP_TITLES[state.step],
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "第 ${state.step + 1} / 8 步",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(10.dp))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "关闭",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
                 )
             }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "新建规则",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = "${state.step + 1} / 8",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        LinearProgressIndicator(
-            progress = { (state.step + 1) / 8f },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        )
+        StepBar(current = state.step, total = 8, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
 
         // 内容区
         Box(modifier = Modifier.weight(1f)) {

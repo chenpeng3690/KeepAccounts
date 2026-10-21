@@ -30,9 +30,9 @@ data class StatsUiState(
     val monthIncome: Long = 0,
     val slices: List<CategorySlice> = emptyList(),
     val budget: BudgetEntity? = null,
-    /** (当日 0 点时间戳, 支出分) */
-    val dailyExpense: List<Pair<Long, Long>> = emptyList(),
-    val maxDaily: Long = 1,
+    /** 近 7 天每日支出 (当日 0 点时间戳, 支出分) */
+    val trend: List<Pair<Long, Long>> = emptyList(),
+    val maxTrend: Long = 1,
     val loaded: Boolean = false
 )
 
@@ -85,15 +85,19 @@ class StatsViewModel(private val container: AppContainer) : ViewModel() {
             it.scope == "total" && it.period == "month" && it.startDate == start
         }
 
-        // 日趋势：本月每天
-        val daysInMonth = Time.toDate(m).lengthOfMonth()
-        val daily = (0 until daysInMonth).map { day ->
-            val dayStart = start + day.toLong() * 24 * 3600_000L
+        // 近 7 天趋势（含今天）；用全量真实支出，避免月初跨月时数据断档
+        val realExpense = txns.filter {
+            it.type == TxType.EXPENSE && it.status == TxStatus.CONFIRMED &&
+                it.source != TxSource.ADJUSTMENT
+        }
+        val today = Time.toDate(System.currentTimeMillis())
+        val trend = (6 downTo 0).map { offset ->
+            val dayStart = Time.fromDate(today.minusDays(offset.toLong()))
             val dayEnd = dayStart + 24 * 3600_000L - 1
-            val amt = expenseTxns.filter { it.occurredAt in dayStart..dayEnd }.sumOf { it.amount }
+            val amt = realExpense.filter { it.occurredAt in dayStart..dayEnd }.sumOf { it.amount }
             dayStart to amt
         }
-        val maxDaily = daily.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
+        val maxTrend = trend.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
 
         StatsUiState(
             month = m,
@@ -101,8 +105,8 @@ class StatsViewModel(private val container: AppContainer) : ViewModel() {
             monthIncome = income,
             slices = slices,
             budget = budget,
-            dailyExpense = daily,
-            maxDaily = maxDaily,
+            trend = trend,
+            maxTrend = maxTrend,
             loaded = true
         )
     }.stateIn(

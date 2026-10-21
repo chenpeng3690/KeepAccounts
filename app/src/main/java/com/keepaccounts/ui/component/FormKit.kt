@@ -349,3 +349,116 @@ fun KaIconButton(
         )
     }
 }
+
+/** 设计稿里的状态徽章：已启用(绿) / 观察中(琥珀) / 已停用(灰) / 信息(蓝) */
+enum class KaBadgeStyle { ON, WATCH, OFF, INFO }
+
+@Composable
+fun KaBadge(text: String, style: KaBadgeStyle) {
+    val (bg, fg) = when (style) {
+        KaBadgeStyle.ON -> Color(0xFFE7F7F1) to Color(0xFF067A57)
+        KaBadgeStyle.WATCH -> Color(0xFFFDF3E3) to Color(0xFFA9640A)
+        KaBadgeStyle.OFF -> Color(0xFFF1F2F5) to Color(0xFF8A91A0)
+        KaBadgeStyle.INFO -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.primary
+    }
+    Surface(shape = RoundedCornerShape(7.dp), color = bg) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = fg,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            maxLines = 1
+        )
+    }
+}
+
+/** 设计稿里的小操作按钮（待确认箱的「判为噪音/修改/确认入账」） */
+@Composable
+fun MiniButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    primary: Boolean = false,
+    danger: Boolean = false
+) {
+    val color = if (primary) MaterialTheme.colorScheme.primary else Color(0xFFF4F5F8)
+    val fg = when {
+        primary -> MaterialTheme.colorScheme.onPrimary
+        danger -> Color(0xFFC92A2A)
+        else -> Color(0xFF5B6270)
+    }
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(30.dp),
+        shape = RoundedCornerShape(9.dp),
+        color = color
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = fg
+            )
+        }
+    }
+}
+
+/** 设计稿里的筛选条（选中黑底白字） */
+@Composable
+fun FilterBar(
+    options: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(7.dp)
+    ) {
+        options.forEachIndexed { i, label ->
+            val on = i == selectedIndex
+            Surface(
+                onClick = { onSelect(i) },
+                shape = RoundedCornerShape(9.dp),
+                color = if (on) Color(0xFF12141A) else MaterialTheme.colorScheme.surface
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (on) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+/** 设计稿向导顶部的 8 段细进度条 */
+@Composable
+fun StepBar(current: Int, total: Int = 8, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        repeat(total) { i ->
+            val done = i < current
+            val cur = i == current
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(3.dp)
+                    .background(
+                        when {
+                            done -> MaterialTheme.colorScheme.primary
+                            cur -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                            else -> Color(0xFFE1E4EA)
+                        },
+                        RoundedCornerShape(2.dp)
+                    )
+            )
+        }
+    }
+}

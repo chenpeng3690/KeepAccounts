@@ -31,7 +31,8 @@ fun KaCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 1.dp
     ) {
         Column(modifier = Modifier.padding(contentPadding), content = content)
     }

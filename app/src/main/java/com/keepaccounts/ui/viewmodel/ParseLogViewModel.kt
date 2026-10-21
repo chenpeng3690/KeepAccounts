@@ -12,11 +12,9 @@ import kotlinx.coroutines.flow.stateIn
 
 enum class LogFilter(val label: String) {
     ALL("全部"),
-    MATCHED("已记账"),
+    MATCHED("已入账"),
     PENDING("待确认"),
-    REJECTED("被拦截"),
-    UNMATCHED("未命中"),
-    CAPTURED("未解析")
+    REJECTED("已拦截")
 }
 
 data class ParseLogUiState(
@@ -32,19 +30,16 @@ class ParseLogViewModel(private val container: AppContainer) : ViewModel() {
     private val recent = container.db.rawEventDao().observeRecent(500)
 
     val state: StateFlow<ParseLogUiState> = combine(recent, filter) { events, current ->
-        val status = when (current) {
-            LogFilter.ALL -> null
-            LogFilter.MATCHED -> "matched"
-            LogFilter.PENDING -> "pending"
-            LogFilter.REJECTED -> "rejected"
-            LogFilter.UNMATCHED -> "unmatched"
-            LogFilter.CAPTURED -> "captured"
+        val items = when (current) {
+            LogFilter.ALL -> events
+            LogFilter.MATCHED -> events.filter { it.parseStatus == "matched" }
+            LogFilter.PENDING -> events.filter { it.parseStatus == "pending" }
+            // 已拦截 = 噪音拦截 + 未命中规则，都是「没记成账」
+            LogFilter.REJECTED -> events.filter {
+                it.parseStatus == "rejected" || it.parseStatus == "unmatched"
+            }
         }
-        ParseLogUiState(
-            items = if (status == null) events else events.filter { it.parseStatus == status },
-            filter = current,
-            loaded = true
-        )
+        ParseLogUiState(items = items, filter = current, loaded = true)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
