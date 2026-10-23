@@ -1,21 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!--
-      刻意不声明 INTERNET 权限。
-      没有这条权限，进程在网络层面就没有外传能力 —— 比任何「我们不会上传」的承诺都硬。
-      副作用：备份只能走系统文件选择器（SAF）写到本机目录，无法直接传网盘。
-      保持注释状态，不要取消注释。
-    -->
-    <!-- <uses-permission android:name="android.permission.INTERNET" /> -->
-
-    <!-- 记账浮悬提示需要发通知（Android 13+ 运行时申请，拒绝时静默降级） -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!--
-      列出可启动应用需要可见性声明（Android 11+）。只声明这一个 intent，
-      比申请 QUERY_ALL_PACKAGES 温和。
-    -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -24,14 +11,12 @@
     </queries>
 
     <application
-        android:name=".KeepAccountsApp"
+        android:name=".NotiLedgerApp"
         android:allowBackup="false"
-        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.KeepAccounts">
+        android:theme="@style/Theme.NotiLedger">
 
         <activity
             android:name=".MainActivity"
@@ -41,14 +26,17 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="notiledger" />
+            </intent-filter>
         </activity>
-        <!--
-          通知监听服务。BIND_NOTIFICATION_LISTENER_SERVICE 是系统级权限，
-          用户必须在「设置 → 通知使用权」里手动勾选本应用后才会被绑定。
-        -->
+
         <service
-            android:name=".notification.KaNotificationListener"
-            android:exported="true"
+            android:name=".service.NotiListenerService"
+            android:exported="false"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
@@ -56,9 +44,8 @@
             </intent-filter>
         </service>
 
-        <!-- 浮悬提示的撤销 / 确认动作按钮 -->
         <receiver
-            android:name=".notification.FeedbackActionReceiver"
+            android:name=".service.FeedbackActionReceiver"
             android:exported="false" />
     </application>
 
