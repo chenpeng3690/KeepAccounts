@@ -60,10 +60,10 @@ import com.local.notebook.ui.screens.account.AccountEditScreen
 import com.local.notebook.ui.screens.add.AddTransactionScreen
 import com.local.notebook.ui.screens.detail.TxnEditScreen
 import com.local.notebook.ui.screens.feedback.FeedbackViewModel
+import com.local.notebook.ui.screens.keywords.KeywordScreen
 import com.local.notebook.ui.screens.logs.ParseLogScreen
 import com.local.notebook.ui.screens.pending.PendingBadgeViewModel
-import com.local.notebook.ui.screens.rulewizard.RuleWizardScreen
-import com.local.notebook.ui.screens.rules.RuleListScreen
+import com.local.notebook.ui.screens.settings.AiConfigScreen
 import com.local.notebook.ui.screens.settings.AutoBackupScreen
 import com.local.notebook.ui.screens.trash.TrashScreen
 import com.local.notebook.ui.screens.whitelist.WhitelistScreen
@@ -163,7 +163,7 @@ fun MainScaffold() {
             ) {
                 PendingScreen(
                     onOpenLogs = { navController.navigate("logs") },
-                    onOpenRules = { navController.navigate("rules") },
+                    onOpenAiConfig = { navController.navigate("ai-config") },
                     onEditPending = { id -> navController.navigate("txn/$id?confirm=true") },
                     snackbarHostState = snackbarHostState
                 )
@@ -179,7 +179,8 @@ fun MainScaffold() {
                 SettingsScreen(
                     onOpenTrash = { navController.navigate("trash") },
                     onOpenWhitelist = { navController.navigate("whitelist") },
-                    onOpenRules = { navController.navigate("rules") },
+                    onOpenKeywords = { navController.navigate("keywords") },
+                    onOpenAiConfig = { navController.navigate("ai-config") },
                     onOpenAutoBackup = { navController.navigate("auto-backup") }
                 )
             }
@@ -243,28 +244,16 @@ fun MainScaffold() {
                 WhitelistScreen(onBack = { navController.popBackStack() })
             }
             composable(
-                "rules",
-                deepLinks = listOf(navDeepLink { uriPattern = "notiledger://rules" })
+                "keywords",
+                deepLinks = listOf(navDeepLink { uriPattern = "notiledger://keywords" })
             ) {
-                RuleListScreen(
-                    onBack = { navController.popBackStack() },
-                    onNewRule = { navController.navigate("rule-wizard?ruleId=-1") },
-                    onEditRule = { id -> navController.navigate("rule-wizard?ruleId=$id") }
-                )
+                KeywordScreen(onBack = { navController.popBackStack() })
             }
             composable(
-                route = "rule-wizard?ruleId={ruleId}",
-                arguments = listOf(
-                    navArgument("ruleId") {
-                        type = NavType.LongType
-                        defaultValue = -1L
-                    }
-                ),
-                deepLinks = listOf(
-                    navDeepLink { uriPattern = "notiledger://rule-wizard?ruleId={ruleId}" }
-                )
+                "ai-config",
+                deepLinks = listOf(navDeepLink { uriPattern = "notiledger://ai-config" })
             ) {
-                RuleWizardScreen(onClose = { navController.popBackStack() })
+                AiConfigScreen(onBack = { navController.popBackStack() })
             }
         }
     }

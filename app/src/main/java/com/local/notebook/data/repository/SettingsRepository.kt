@@ -23,9 +23,12 @@ class SettingsRepository @Inject constructor(
     private object Keys {
         val TrashRetentionDays = intPreferencesKey("trash_retention_days")
         val WhitelistPackages = stringSetPreferencesKey("whitelist_packages")
-        val FallbackRuleEnabled = booleanPreferencesKey("fallback_rule_enabled")
         val GuideShown = booleanPreferencesKey("notification_guide_shown")
-        val RuleSeedVersion = intPreferencesKey("rule_seed_version")
+        val AiEnabled = booleanPreferencesKey("ai_enabled")
+        val AiMode = stringPreferencesKey("ai_mode")
+        val AiBaseUrl = stringPreferencesKey("ai_base_url")
+        val AiModel = stringPreferencesKey("ai_model")
+        val AiConfidencePercent = intPreferencesKey("ai_confidence_percent")
         val ThemeMode = stringPreferencesKey("theme_mode")
         val FeedbackMode = stringPreferencesKey("feedback_mode")
         val QuietEnabled = booleanPreferencesKey("quiet_enabled")
@@ -46,14 +49,25 @@ class SettingsRepository @Inject constructor(
             prefs[Keys.WhitelistPackages] ?: DEFAULT_WHITELIST
         }
 
-    val fallbackRuleEnabled: Flow<Boolean> =
-        context.settingsDataStore.data.map { prefs -> prefs[Keys.FallbackRuleEnabled] ?: true }
-
     val guideShown: Flow<Boolean> =
         context.settingsDataStore.data.map { prefs -> prefs[Keys.GuideShown] ?: false }
 
-    val ruleSeedVersion: Flow<Int> =
-        context.settingsDataStore.data.map { prefs -> prefs[Keys.RuleSeedVersion] ?: 0 }
+    val aiEnabled: Flow<Boolean> =
+        context.settingsDataStore.data.map { prefs -> prefs[Keys.AiEnabled] ?: false }
+
+    val aiMode: Flow<String> =
+        context.settingsDataStore.data.map { prefs -> prefs[Keys.AiMode] ?: "DIRECT" }
+
+    val aiBaseUrl: Flow<String> =
+        context.settingsDataStore.data.map { prefs ->
+            prefs[Keys.AiBaseUrl] ?: "https://api.deepseek.com"
+        }
+
+    val aiModel: Flow<String> =
+        context.settingsDataStore.data.map { prefs -> prefs[Keys.AiModel] ?: "deepseek-chat" }
+
+    val aiConfidencePercent: Flow<Int> =
+        context.settingsDataStore.data.map { prefs -> prefs[Keys.AiConfidencePercent] ?: 70 }
 
     val themeMode: Flow<String> =
         context.settingsDataStore.data.map { prefs -> prefs[Keys.ThemeMode] ?: "SYSTEM" }
@@ -105,16 +119,24 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    suspend fun setFallbackRuleEnabled(enabled: Boolean) {
-        context.settingsDataStore.edit { prefs -> prefs[Keys.FallbackRuleEnabled] = enabled }
-    }
-
     suspend fun setGuideShown(shown: Boolean) {
         context.settingsDataStore.edit { prefs -> prefs[Keys.GuideShown] = shown }
     }
 
-    suspend fun setRuleSeedVersion(version: Int) {
-        context.settingsDataStore.edit { prefs -> prefs[Keys.RuleSeedVersion] = version }
+    suspend fun setAiEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { prefs -> prefs[Keys.AiEnabled] = enabled }
+    }
+
+    suspend fun setAiMode(mode: String) {
+        context.settingsDataStore.edit { prefs -> prefs[Keys.AiMode] = mode }
+    }
+
+    suspend fun setAiConfig(baseUrl: String, model: String, confidencePercent: Int) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[Keys.AiBaseUrl] = baseUrl.trim()
+            prefs[Keys.AiModel] = model.trim()
+            prefs[Keys.AiConfidencePercent] = confidencePercent.coerceIn(0, 100)
+        }
     }
 
     suspend fun setThemeMode(mode: String) {
@@ -151,23 +173,31 @@ class SettingsRepository @Inject constructor(
 
     suspend fun restorePreferences(
         whitelist: Set<String>,
-        fallbackEnabled: Boolean,
         trashRetentionDays: Int,
         themeMode: String,
         feedbackMode: String,
         quietEnabled: Boolean,
         quietStart: String,
-        quietEnd: String
+        quietEnd: String,
+        aiEnabled: Boolean,
+        aiMode: String,
+        aiBaseUrl: String,
+        aiModel: String,
+        aiConfidencePercent: Int
     ) {
         context.settingsDataStore.edit { prefs ->
             prefs[Keys.WhitelistPackages] = whitelist
-            prefs[Keys.FallbackRuleEnabled] = fallbackEnabled
             prefs[Keys.TrashRetentionDays] = trashRetentionDays
             prefs[Keys.ThemeMode] = themeMode
             prefs[Keys.FeedbackMode] = feedbackMode
             prefs[Keys.QuietEnabled] = quietEnabled
             prefs[Keys.QuietStart] = quietStart
             prefs[Keys.QuietEnd] = quietEnd
+            prefs[Keys.AiEnabled] = aiEnabled
+            prefs[Keys.AiMode] = aiMode
+            prefs[Keys.AiBaseUrl] = aiBaseUrl
+            prefs[Keys.AiModel] = aiModel
+            prefs[Keys.AiConfidencePercent] = aiConfidencePercent.coerceIn(0, 100)
         }
     }
 

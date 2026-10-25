@@ -16,7 +16,8 @@ enum class LogFilter(val label: String) {
     ALL("全部"),
     MATCHED("已入账"),
     PENDING("待确认"),
-    REJECTED("已拦截")
+    IGNORED("已忽略"),
+    FAILED("AI 失败")
 }
 
 @HiltViewModel
@@ -30,7 +31,19 @@ class ParseLogViewModel @Inject constructor(
         repository.rawLogs,
         filter
     ) { logs, current ->
-        if (current == LogFilter.ALL) logs else logs.filter { it.matchResult == current.name }
+        when (current) {
+            LogFilter.ALL -> logs
+            LogFilter.MATCHED -> logs.filter {
+                it.matchResult == "MATCHED" || it.matchResult == "AI_MATCHED"
+            }
+            LogFilter.PENDING -> logs.filter {
+                it.matchResult in setOf("PENDING", "AI_PENDING", "QUEUED", "AI_RETRY")
+            }
+            LogFilter.IGNORED -> logs.filter {
+                it.matchResult in setOf("REJECTED", "AI_IGNORED", "AI_DUPLICATE")
+            }
+            LogFilter.FAILED -> logs.filter { it.matchResult == "AI_FAILED" }
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),

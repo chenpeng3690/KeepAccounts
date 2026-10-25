@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.local.notebook.data.local.NotificationRawEntity
 import com.local.notebook.data.local.PendingRow
-import com.local.notebook.data.local.RuleEntity
 import com.local.notebook.data.repository.LedgerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,23 +32,24 @@ class PendingViewModel @Inject constructor(
     private val repository: LedgerRepository
 ) : ViewModel() {
 
-    private val readyRule = MutableStateFlow<RuleEntity?>(null)
-    val ruleReady: StateFlow<RuleEntity?> = readyRule
-
     val state: StateFlow<PendingUiState> = combine(
         repository.pendingTxns,
         repository.rawLogs
     ) { pending, raws ->
         val cutoff = System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L
         val week = raws.filter { it.receivedAt >= cutoff }
+        val matched = week.count { it.matchResult == "MATCHED" || it.matchResult == "AI_MATCHED" }
+        val ignored = week.filter {
+            it.matchResult == "REJECTED" || it.matchResult == "AI_IGNORED"
+        }
         PendingUiState(
             loading = false,
             items = pending,
             overview = PendingOverview(
-                autoPosted = week.count { it.matchResult == "MATCHED" },
-                blocked = week.count { it.matchResult == "REJECTED" },
+                autoPosted = matched,
+                blocked = ignored.size,
                 pending = pending.size,
-                rejected = week.filter { it.matchResult == "REJECTED" }.take(5)
+                rejected = ignored.take(5)
             )
         )
     }.stateIn(
@@ -58,11 +58,22 @@ class PendingViewModel @Inject constructor(
         initialValue = PendingUiState()
     )
 
+    private val _toast = MutableStateFlow<String?>(null)
+    val toast: StateFlow<String?> = _toast
+
     fun confirm(id: Long) {
         viewModelScope.launch {
-            val rule = repository.confirmPendingTransaction(id)
-            maybeOfferEnable(rule)
+            val confirmed = repository.confirmPendingTransaction(id)
+            _toast.value = if (confirmed) {
+                "已确认入账"
+            } else {
+                "转账缺少转入账户，请先编辑补充"
+            }
         }
+    }
+
+    fun consumeToast() {
+        _toast.value = null
     }
 
     fun reject(id: Long) {
@@ -70,34 +81,10 @@ class PendingViewModel @Inject constructor(
     }
 
     fun confirmAll() {
-        viewModelScope.launch {
-            val rules = repository.confirmAllPending()
-            rules.forEach { maybeOfferEnable(it) }
-        }
+        viewModelScope.launch { repository.confirmAllPending() }
     }
 
     fun rejectAll() {
         viewModelScope.launch { repository.rejectAllPending() }
-    }
-
-    fun enableRule(ruleId: Long) {
-        viewModelScope.launch {
-            repository.setRuleState(ruleId, "ACTIVE")
-            readyRule.value = null
-        }
-    }
-
-    fun dismissRuleOffer() {
-        readyRule.value = null
-    }
-
-    private fun maybeOfferEnable(rule: RuleEntity?) {
-        if (rule == null) return
-        if (rule.state == "OBSERVING" &&
-            rule.statsConfirmed >= 3 &&
-            rule.statsRejected == 0
-        ) {
-            readyRule.value = rule
-        }
     }
 }

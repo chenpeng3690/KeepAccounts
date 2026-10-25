@@ -7,11 +7,10 @@ import com.local.notebook.data.local.BudgetDao
 import com.local.notebook.data.local.CategoryDao
 import com.local.notebook.data.local.LedgerDatabase
 import com.local.notebook.data.local.NotificationRawDao
-import com.local.notebook.data.local.RuleDao
+import com.local.notebook.data.local.TransactionKeywordDao
 import com.local.notebook.data.local.TxnDao
 import com.local.notebook.data.local.TxnEditLogDao
 import com.local.notebook.data.repository.LedgerRepository
-import com.local.notebook.data.repository.SettingsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,7 +25,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): LedgerDatabase =
-        Room.databaseBuilder(context, LedgerDatabase::class.java, "notiledger.db").build()
+        Room.databaseBuilder(context, LedgerDatabase::class.java, "notiledger.db")
+            .addMigrations(LedgerDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideAccountDao(db: LedgerDatabase): AccountDao = db.accountDao()
@@ -47,12 +48,10 @@ object AppModule {
     fun provideNotificationRawDao(db: LedgerDatabase): NotificationRawDao = db.notificationRawDao()
 
     @Provides
-    fun provideRuleDao(db: LedgerDatabase): RuleDao = db.ruleDao()
+    fun provideTransactionKeywordDao(db: LedgerDatabase): TransactionKeywordDao =
+        db.transactionKeywordDao()
 
     @Provides
     @Singleton
-    fun provideLedgerRepository(
-        db: LedgerDatabase,
-        settings: SettingsRepository
-    ): LedgerRepository = LedgerRepository(db, settings)
+    fun provideLedgerRepository(db: LedgerDatabase): LedgerRepository = LedgerRepository(db)
 }

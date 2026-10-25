@@ -9,7 +9,7 @@ import com.local.notebook.data.local.BudgetEntity
 import com.local.notebook.data.local.CategoryEntity
 import com.local.notebook.data.local.LedgerDatabase
 import com.local.notebook.data.local.NotificationRawEntity
-import com.local.notebook.data.local.RuleEntity
+import com.local.notebook.data.local.TransactionKeywordEntity
 import com.local.notebook.data.local.TxnEntity
 import com.local.notebook.data.repository.LedgerRepository
 import com.local.notebook.data.repository.SettingsRepository
@@ -35,7 +35,7 @@ data class BackupPreview(
     val createdAt: Long,
     val txnCount: Int,
     val accountCount: Int,
-    val ruleCount: Int,
+    val keywordCount: Int,
     val appVersion: String,
     val schemaVersion: Int
 )
@@ -52,7 +52,7 @@ class BackupManager @Inject constructor(
         val categories = db.categoryDao().getAll()
         val txns = db.txnDao().getAllOnce()
         val budgets = db.budgetDao().getAllOnce()
-        val rules = db.ruleDao().getAllOnce()
+        val keywords = db.transactionKeywordDao().getAllOnce()
         val raws = db.notificationRawDao().getAllOnce()
 
         val entries = linkedMapOf<String, ByteArray>()
@@ -76,7 +76,7 @@ class BackupManager @Inject constructor(
             RAW_HEADER,
             raws.map { it.toCsvRow() }
         ).toByteArray(Charsets.UTF_8)
-        entries["data/rules.json"] = rulesToJson(rules)
+        entries["data/keywords.json"] = keywordsToJson(keywords)
         entries["data/settings.json"] = settingsToJson()
 
         val fileHashes = JSONObject()
@@ -90,7 +90,7 @@ class BackupManager @Inject constructor(
             put("accounts", accounts.size)
             put("categories", categories.size)
             put("transactions", txns.size)
-            put("rules", rules.size)
+            put("keywords", keywords.size)
             put("files", fileHashes)
         }
         entries["manifest.json"] = manifest.toString().toByteArray(Charsets.UTF_8)
@@ -117,7 +117,7 @@ class BackupManager @Inject constructor(
             createdAt = manifest.optLong("createdAt"),
             txnCount = manifest.optInt("transactions"),
             accountCount = manifest.optInt("accounts"),
-            ruleCount = manifest.optInt("rules"),
+            keywordCount = manifest.optInt("keywords", manifest.optInt("rules")),
             appVersion = manifest.optString("appVersion", "未知"),
             schemaVersion = manifest.optInt("schemaVersion", 1)
         )
@@ -133,26 +133,27 @@ class BackupManager @Inject constructor(
         val txns = parseRows(entries["data/transactions.csv"]).map { it.toTxn() }
         val budgets = parseRows(entries["data/budgets.csv"]).map { it.toBudget() }
         val raws = parseRows(entries["data/notification_raw.csv"]).map { it.toRaw() }
-        val rules = entries["data/rules.json"]?.let { jsonToRules(it) } ?: emptyList()
+        val keywords = entries["data/keywords.json"]?.let { jsonToKeywords(it) } ?: emptyList()
 
         db.withTransaction {
             db.txnEditLogDao().deleteAll()
             db.txnDao().deleteAll()
             db.notificationRawDao().deleteAll()
             db.budgetDao().deleteAll()
-            db.ruleDao().deleteAll()
+            db.transactionKeywordDao().deleteAll()
             db.categoryDao().deleteAll()
             db.accountDao().deleteAll()
 
             if (accounts.isNotEmpty()) db.accountDao().insertAll(accounts)
             if (categories.isNotEmpty()) db.categoryDao().insertAll(categories)
             if (raws.isNotEmpty()) db.notificationRawDao().insertAll(raws)
-            if (rules.isNotEmpty()) db.ruleDao().insertAll(rules)
+            if (keywords.isNotEmpty()) db.transactionKeywordDao().insertAll(keywords)
             if (budgets.isNotEmpty()) db.budgetDao().insertAll(budgets)
             if (txns.isNotEmpty()) db.txnDao().insertAll(txns)
         }
 
         entries["data/settings.json"]?.let { restoreSettings(it) }
+        repository.ensureSeeded()
         repository.recalculateBalances()
     }
 
@@ -160,13 +161,17 @@ class BackupManager @Inject constructor(
         val whitelist = settings.whitelistPackages.first()
         val json = JSONObject().apply {
             put("whitelist", JSONArray(whitelist.toList()))
-            put("fallbackEnabled", settings.fallbackRuleEnabled.first())
             put("trashRetentionDays", settings.trashRetentionDays.first())
             put("themeMode", settings.themeMode.first())
             put("feedbackMode", settings.feedbackMode.first())
             put("quietEnabled", settings.quietEnabled.first())
             put("quietStart", settings.quietStart.first())
             put("quietEnd", settings.quietEnd.first())
+            put("aiEnabled", settings.aiEnabled.first())
+            put("aiMode", settings.aiMode.first())
+            put("aiBaseUrl", settings.aiBaseUrl.first())
+            put("aiModel", settings.aiModel.first())
+            put("aiConfidencePercent", settings.aiConfidencePercent.first())
         }
         return json.toString().toByteArray(Charsets.UTF_8)
     }
@@ -181,68 +186,47 @@ class BackupManager @Inject constructor(
         }
         settings.restorePreferences(
             whitelist = whitelist,
-            fallbackEnabled = json.optBoolean("fallbackEnabled", true),
             trashRetentionDays = json.optInt("trashRetentionDays", 7),
             themeMode = json.optString("themeMode", "SYSTEM"),
             feedbackMode = json.optString("feedbackMode", "ALL"),
             quietEnabled = json.optBoolean("quietEnabled", true),
             quietStart = json.optString("quietStart", "23:00"),
-            quietEnd = json.optString("quietEnd", "07:00")
+            quietEnd = json.optString("quietEnd", "07:00"),
+            aiEnabled = json.optBoolean("aiEnabled", false),
+            aiMode = json.optString("aiMode", "DIRECT"),
+            aiBaseUrl = json.optString("aiBaseUrl", "https://api.deepseek.com"),
+            aiModel = json.optString("aiModel", "deepseek-chat"),
+            aiConfidencePercent = json.optInt("aiConfidencePercent", 70)
         )
     }
 
-    private fun rulesToJson(rules: List<RuleEntity>): ByteArray {
+    private fun keywordsToJson(keywords: List<TransactionKeywordEntity>): ByteArray {
         val array = JSONArray()
-        rules.forEach { rule ->
+        keywords.forEach { keyword ->
             array.put(
                 JSONObject().apply {
-                    put("id", rule.id)
-                    put("name", rule.name)
-                    put("packageName", rule.packageName)
-                    put("priority", rule.priority)
-                    put("isBuiltin", rule.isBuiltin)
-                    put("state", rule.state)
-                    put("templateJson", rule.templateJson)
-                    put("directionWords", rule.directionWords)
-                    put("excludeKeywords", rule.excludeKeywords)
-                    put("defaultAccountId", rule.defaultAccountId)
-                    put("defaultCategoryId", rule.defaultCategoryId)
-                    put("amountHint", rule.amountHint)
-                    put("statsHits", rule.statsHits)
-                    put("statsConfirmed", rule.statsConfirmed)
-                    put("statsRejected", rule.statsRejected)
-                    put("lastHitAt", rule.lastHitAt)
-                    put("createdAt", rule.createdAt)
-                    put("updatedAt", rule.updatedAt)
+                    put("word", keyword.word)
+                    put("enabled", keyword.enabled)
+                    put("isBuiltin", keyword.isBuiltin)
+                    put("sortOrder", keyword.sortOrder)
                 }
             )
         }
         return array.toString().toByteArray(Charsets.UTF_8)
     }
 
-    private fun jsonToRules(bytes: ByteArray): List<RuleEntity> {
-        val array = runCatching { JSONArray(bytes.toString(Charsets.UTF_8)) }.getOrNull() ?: return emptyList()
+    private fun jsonToKeywords(bytes: ByteArray): List<TransactionKeywordEntity> {
+        val array = runCatching { JSONArray(bytes.toString(Charsets.UTF_8)) }.getOrNull()
+            ?: return emptyList()
         return (0 until array.length()).mapNotNull { index ->
             val obj = array.optJSONObject(index) ?: return@mapNotNull null
-            RuleEntity(
-                id = obj.optLong("id"),
-                name = obj.optString("name", "规则"),
-                packageName = obj.nullableString("packageName"),
-                priority = obj.optInt("priority", 10),
+            val word = obj.optString("word").trim()
+            if (word.isEmpty()) return@mapNotNull null
+            TransactionKeywordEntity(
+                word = word,
+                enabled = obj.optBoolean("enabled", true),
                 isBuiltin = obj.optBoolean("isBuiltin", false),
-                state = obj.optString("state", "OBSERVING"),
-                templateJson = obj.optString("templateJson"),
-                directionWords = obj.optString("directionWords"),
-                excludeKeywords = obj.optString("excludeKeywords"),
-                defaultAccountId = obj.nullableLong("defaultAccountId"),
-                defaultCategoryId = obj.nullableLong("defaultCategoryId"),
-                amountHint = obj.nullableLong("amountHint"),
-                statsHits = obj.optInt("statsHits"),
-                statsConfirmed = obj.optInt("statsConfirmed"),
-                statsRejected = obj.optInt("statsRejected"),
-                lastHitAt = obj.nullableLong("lastHitAt"),
-                createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
-                updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
+                sortOrder = obj.optInt("sortOrder", index)
             )
         }
     }
@@ -305,7 +289,8 @@ class BackupManager @Inject constructor(
 
     private fun NotificationRawEntity.toCsvRow(): List<String?> = listOf(
         id.toString(), packageName, appLabel, title, text, postedAt.toString(),
-        receivedAt.toString(), groupKey, ruleId?.toString(), matchResult, rejectReason
+        receivedAt.toString(), groupKey, ruleId?.toString(), matchResult, rejectReason,
+        aiResponse, aiModel, aiError
     )
 
     private fun Map<String, String>.toAccount(): AccountEntity = AccountEntity(
@@ -378,17 +363,14 @@ class BackupManager @Inject constructor(
         groupKey = this["groupKey"]?.takeIf { it.isNotBlank() },
         ruleId = this["ruleId"]?.toLongOrNull(),
         matchResult = this["matchResult"].orEmpty().ifBlank { "REJECTED" },
-        rejectReason = this["rejectReason"]?.takeIf { it.isNotBlank() }
+        rejectReason = this["rejectReason"]?.takeIf { it.isNotBlank() },
+        aiResponse = this["aiResponse"]?.takeIf { it.isNotBlank() },
+        aiModel = this["aiModel"]?.takeIf { it.isNotBlank() },
+        aiError = this["aiError"]?.takeIf { it.isNotBlank() }
     )
 
-    private fun JSONObject.nullableString(key: String): String? =
-        if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
-
-    private fun JSONObject.nullableLong(key: String): Long? =
-        if (isNull(key)) null else optLong(key)
-
     private companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
         val ACCOUNT_HEADER = listOf(
             "id", "name", "type", "initialBalance", "currentBalance", "creditLimit",
             "billDay", "repayDay", "includeInNetWorth", "icon", "colorHex", "sortOrder",
@@ -405,7 +387,7 @@ class BackupManager @Inject constructor(
         val BUDGET_HEADER = listOf("id", "scope", "categoryId", "period", "amount", "startDate")
         val RAW_HEADER = listOf(
             "id", "packageName", "appLabel", "title", "text", "postedAt", "receivedAt",
-            "groupKey", "ruleId", "matchResult", "rejectReason"
+            "groupKey", "ruleId", "matchResult", "rejectReason", "aiResponse", "aiModel", "aiError"
         )
     }
 }

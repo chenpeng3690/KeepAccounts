@@ -149,13 +149,11 @@ interface TxnDao {
                t.note AS note, t.occurredAt AS occurredAt, t.accountId AS accountId,
                t.categoryId AS categoryId, t.ruleId AS ruleId, t.rawNotificationId AS rawNotificationId,
                a.name AS accountName, c.name AS categoryName, c.icon AS categoryIcon, c.tone AS categoryTone,
-               r.name AS ruleName, r.state AS ruleState,
                n.appLabel AS appLabel, n.packageName AS packageName, n.title AS rawTitle,
                n.text AS rawText, n.receivedAt AS rawReceivedAt, n.matchResult AS rawResult
         FROM txn t
         LEFT JOIN account a ON a.id = t.accountId
         LEFT JOIN category c ON c.id = t.categoryId
-        LEFT JOIN rule r ON r.id = t.ruleId
         LEFT JOIN notification_raw n ON n.id = t.rawNotificationId
         WHERE t.status = 'PENDING' AND t.deletedAt IS NULL
         ORDER BY t.occurredAt DESC, t.id DESC
@@ -272,8 +270,24 @@ interface NotificationRawDao {
     @Query("UPDATE notification_raw SET title = :title, text = :text, receivedAt = :receivedAt WHERE id = :id")
     suspend fun updateContent(id: Long, title: String?, text: String?, receivedAt: Long)
 
+    @Query("SELECT * FROM notification_raw WHERE id = :id")
+    suspend fun getById(id: Long): NotificationRawEntity?
+
     @Query("UPDATE notification_raw SET matchResult = :result, rejectReason = :reason WHERE id = :id")
-    suspend fun updateResult(id: Long, result: String, reason: String)
+    suspend fun updateResult(id: Long, result: String, reason: String?)
+
+    @Query(
+        "UPDATE notification_raw SET matchResult = :result, rejectReason = :reason, " +
+            "aiResponse = :response, aiModel = :model, aiError = :error WHERE id = :id"
+    )
+    suspend fun updateAiResult(
+        id: Long,
+        result: String,
+        reason: String?,
+        response: String?,
+        model: String?,
+        error: String?
+    )
 
     @Query("DELETE FROM notification_raw WHERE receivedAt < :cutoff")
     suspend fun deleteOlderThan(cutoff: Long)
@@ -286,49 +300,31 @@ interface NotificationRawDao {
 }
 
 @Dao
-interface RuleDao {
-    @Query(
-        "SELECT * FROM rule WHERE (packageName = :packageName OR packageName IS NULL) " +
-            "AND state != 'DISABLED' ORDER BY priority DESC, id"
-    )
-    suspend fun activeRulesForPackage(packageName: String): List<RuleEntity>
+interface TransactionKeywordDao {
+    @Query("SELECT * FROM transaction_keyword ORDER BY sortOrder, id")
+    fun observeAll(): Flow<List<TransactionKeywordEntity>>
 
-    @Query("SELECT * FROM rule ORDER BY priority DESC, id")
-    fun observeAll(): Flow<List<RuleEntity>>
+    @Query("SELECT * FROM transaction_keyword WHERE enabled = 1 ORDER BY sortOrder, id")
+    suspend fun getEnabled(): List<TransactionKeywordEntity>
 
-    @Query("SELECT COUNT(*) FROM rule")
+    @Query("SELECT COUNT(*) FROM transaction_keyword")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM rule WHERE isBuiltin = 1")
-    suspend fun builtinRules(): List<RuleEntity>
+    @Query("SELECT * FROM transaction_keyword ORDER BY sortOrder, id")
+    suspend fun getAllOnce(): List<TransactionKeywordEntity>
 
-    @Query("SELECT * FROM rule WHERE id = :id")
-    suspend fun getById(id: Long): RuleEntity?
+    @Insert
+    suspend fun insertAll(items: List<TransactionKeywordEntity>)
 
-    @Query("DELETE FROM rule WHERE id = :id")
+    @Insert
+    suspend fun insert(item: TransactionKeywordEntity): Long
+
+    @Query("UPDATE transaction_keyword SET enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    @Query("DELETE FROM transaction_keyword WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Insert
-    suspend fun insertAll(items: List<RuleEntity>): List<Long>
-
-    @Insert
-    suspend fun insert(item: RuleEntity): Long
-
-    @Update
-    suspend fun update(item: RuleEntity)
-
-    @Query("UPDATE rule SET statsHits = statsHits + 1, lastHitAt = :at WHERE id = :id")
-    suspend fun recordHit(id: Long, at: Long)
-
-    @Query("UPDATE rule SET statsConfirmed = statsConfirmed + 1 WHERE id = :id")
-    suspend fun recordConfirmed(id: Long)
-
-    @Query("UPDATE rule SET statsRejected = statsRejected + 1 WHERE id = :id")
-    suspend fun recordRejected(id: Long)
-
-    @Query("SELECT * FROM rule ORDER BY priority DESC, id")
-    suspend fun getAllOnce(): List<RuleEntity>
-
-    @Query("DELETE FROM rule")
+    @Query("DELETE FROM transaction_keyword")
     suspend fun deleteAll()
 }

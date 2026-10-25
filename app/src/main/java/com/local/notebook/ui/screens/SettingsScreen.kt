@@ -54,14 +54,17 @@ import java.util.Locale
 fun SettingsScreen(
     onOpenTrash: () -> Unit,
     onOpenWhitelist: () -> Unit,
-    onOpenRules: () -> Unit,
+    onOpenKeywords: () -> Unit,
+    onOpenAiConfig: () -> Unit,
     onOpenAutoBackup: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val p = LedgerTheme.palette
     val retentionDays by viewModel.retentionDays.collectAsStateWithLifecycle()
     val whitelist by viewModel.whitelistPackages.collectAsStateWithLifecycle()
-    val ruleCount by viewModel.ruleCount.collectAsStateWithLifecycle()
+    val keywordCount by viewModel.keywordCount.collectAsStateWithLifecycle()
+    val aiEnabled by viewModel.aiEnabled.collectAsStateWithLifecycle()
+    val aiMode by viewModel.aiMode.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val feedbackMode by viewModel.feedbackMode.collectAsStateWithLifecycle()
     val autoBackupEnabled by viewModel.autoBackupEnabled.collectAsStateWithLifecycle()
@@ -77,6 +80,7 @@ fun SettingsScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showFeedbackDialog by remember { mutableStateOf(false) }
+    var showAiModeDialog by remember { mutableStateOf(false) }
 
     val backupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip")
@@ -134,10 +138,30 @@ fun SettingsScreen(
                 icon = R.drawable.ic_rules,
                 iconTint = p.warnText,
                 iconBg = p.warnSoft,
-                label = "解析规则",
-                value = "$ruleCount 条",
+                label = "交易关键词",
+                value = "$keywordCount 个",
                 showDivider = true,
-                onClick = onOpenRules
+                onClick = onOpenKeywords
+            )
+            SettingsRow(
+                icon = R.drawable.ic_ai,
+                iconTint = p.brandSoftText,
+                iconBg = p.brandSoft,
+                label = "AI 解析",
+                value = aiLabel(aiEnabled, aiMode),
+                showDivider = true,
+                onClick = onOpenAiConfig
+            )
+            SettingsRow(
+                icon = null,
+                iconTint = p.ink3,
+                iconBg = p.card,
+                label = "AI 入账方式",
+                value = if (aiMode == "PENDING") "全部待确认" else "直接入账",
+                indent = true,
+                labelMuted = true,
+                showDivider = true,
+                onClick = { showAiModeDialog = true }
             )
             SettingsRow(
                 icon = R.drawable.ic_tab_pending,
@@ -248,7 +272,7 @@ fun SettingsScreen(
         ) {
             Text("通知记账 v1.0", fontSize = 11.sp, color = p.ink3)
             Text(
-                "本应用不联网，数据只存在这台手机上",
+                "账单数据仅保存在本机；开启 AI 解析后，通知原文会发送到所配置的 AI 服务商",
                 fontSize = 10.sp,
                 color = p.ink3.copy(alpha = 0.7f),
                 modifier = Modifier.padding(top = 4.dp),
@@ -268,6 +292,18 @@ fun SettingsScreen(
             current = themeMode,
             onSelect = viewModel::setThemeMode,
             onDismiss = { showThemeDialog = false }
+        )
+    }
+    if (showAiModeDialog) {
+        ChoiceDialog(
+            title = "AI 入账方式",
+            options = listOf(
+                "直接入账" to "DIRECT",
+                "全部待确认" to "PENDING"
+            ),
+            current = aiMode,
+            onSelect = viewModel::setAiMode,
+            onDismiss = { showAiModeDialog = false }
         )
     }
     if (showFeedbackDialog) {
@@ -310,6 +346,12 @@ private fun feedbackLabel(mode: String): String = when (mode) {
     "SUCCESS" -> "仅成功入账"
     "NONE" -> "不提示"
     else -> "全部提示"
+}
+
+private fun aiLabel(enabled: Boolean, mode: String): String = when {
+    !enabled -> "未开启"
+    mode == "PENDING" -> "已开启 · 全部待确认"
+    else -> "已开启 · 直接入账"
 }
 
 private fun themeLabel(mode: String): String = when (mode) {

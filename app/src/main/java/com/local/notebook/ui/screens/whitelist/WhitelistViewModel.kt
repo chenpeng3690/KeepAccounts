@@ -31,7 +31,6 @@ data class WhitelistUiState(
     val apps: List<InstalledApp> = emptyList(),
     val manualPackages: List<String> = emptyList(),
     val whitelist: Set<String> = emptySet(),
-    val fallbackEnabled: Boolean = true,
     val query: String = "",
     val loading: Boolean = true
 )
@@ -52,9 +51,8 @@ class WhitelistViewModel @Inject constructor(
         allApps,
         query,
         settings.whitelistPackages,
-        settings.fallbackRuleEnabled,
         loading
-    ) { apps, search, whitelist, fallback, isLoading ->
+    ) { apps, search, whitelist, isLoading ->
         val keyword = search.trim()
         val filtered = apps
             .filter {
@@ -72,7 +70,6 @@ class WhitelistViewModel @Inject constructor(
                 .filter { pkg -> apps.none { it.packageName == pkg } }
                 .sorted(),
             whitelist = whitelist,
-            fallbackEnabled = fallback,
             query = search,
             loading = isLoading
         )
@@ -100,10 +97,6 @@ class WhitelistViewModel @Inject constructor(
 
     fun addPackage(packageName: String) {
         viewModelScope.launch { settings.addPackage(packageName) }
-    }
-
-    fun setFallbackEnabled(enabled: Boolean) {
-        viewModelScope.launch { settings.setFallbackRuleEnabled(enabled) }
     }
 
     private fun loadLauncherApps(): List<InstalledApp> {

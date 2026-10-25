@@ -1,14 +1,14 @@
 # 通知记账（NotiLedger）
 
-一个纯本地、离线运行的通知自动记账 Android 应用。读取白名单应用的通知，解析金额、商户与收支方向，自动生成账单或进入待确认箱。
+一个通知自动记账 Android 应用。读取白名单应用的通知，先用可编辑的交易关键词初筛，再交给 AI 判断是否为真实交易，自动生成账单或进入待确认箱。
 
 ## 技术栈
 
 - Kotlin 2.0.21，协程 + Flow
 - Jetpack Compose + Material 3，单 Activity + Navigation Compose
-- Room（8 张表，version 1）
-- DataStore Preferences
-- WorkManager（自动备份）
+- Room（8 张表，version 2）
+- DataStore Preferences + Android Keystore（API Key 加密）
+- WorkManager（自动备份、AI 解析队列）
 - Hilt + KSP
 - minSdk 26 / targetSdk 35，包名 `com.local.notebook`
 
@@ -37,30 +37,20 @@ Gradle 已配置阿里云与腾讯云镜像；`gradle.properties` 中的代理�
 处理流水线：
 
 1. 白名单校验（不在白名单的通知不落库）
-2. L0 通知类型过滤（promo / recommendation / social / system）
-3. L1 全局噪音词（出现「支付成功」「到账」等明确语义时豁免）
-4. 内置/自定义规则匹配（有序片段模板）
-5. L2 规则排除词
-6. L3 金额、长度、上限校验
-7. L4 方向判定（收入优先，退款视为收入）
-8. 特殊场景（退款按收入、转账未识别时进入待确认）
-9. 60 秒去重
-10. 写库、余额重算、规则统计与反馈提示
+2. 60 秒内同通知 key 去重，只更新原文
+3. 交易关键词初筛（可增删改，未命中不保存原文）
+4. 命中后落库，交给 WorkManager 调用 AI
+5. AI 返回是否交易、收支方向、金额、商户、分类、账户与置信度
+6. 校验金额、置信度、账户、去重后直接入账或进入待确认
+7. AI 判定非交易则只记识别日志；AI 失败/未配置则用本地金额提取转待确认
+8. 写库、余额重算、横幅提示
 
-规则模板编码（用户不可见）：
+设置页可选择：
 
-```
-literal:微信支付,支付成功|slot:amount|fuzzy:true|direction:EXPENSE
-```
+- **直接入账**（默认）：AI 置信度达标、金额合法、账户匹配时直接记账
+- **全部待确认**：AI 确认的交易也先进入待确认箱
 
-- `literal`：任意一个文案命中即可；多个 `literal` 片段需按顺序出现，片段之间允许无关内容。
-- `fuzzy`：忽略空白、标点、全半角与大小写。
-- `slot`：金额/商户槽位由抽取器全局识别。
-- `direction`：可选，缺省按方向词自动判断。
-
-内置规则位于 `app/src/main/assets/default_rules.json`（可读副本），运行时由仓库层以同一模板写入数据库，并按 `rule_seed_version` 做版本同步。
-
-新规则保存后默认 `OBSERVING`：命中只进入待确认，确认 3 条且无噪音后可启用自动记账。有专属规则的应用，未命中的通知不会再走通用兜底，避免聊天消息涌入待确认。
+退款按收入处理；转账必须识别转出与转入账户，否则进入待确认。内置默认关键词包括支付、付款、消费、扣款、收款、到账、转账、退款、交易、入账、支付成功、退款成功等，不包含「元 / ¥ / 红包 / 优惠」等泛词。
 
 ## 备份格式
 
@@ -72,9 +62,9 @@ data/accounts.csv
 data/categories.csv
 data/transactions.csv
 data/budgets.csv
-data/notification_raw.csv
-data/rules.json
-data/settings.json            # 白名单、兜底开关、回收站保留期、主题、提示模式、静音时段
+data/notification_raw.csv     # 含 AI 返回原文、模型与错误信息
+data/keywords.json
+data/settings.json            # 白名单、回收站保留期、主题、提示模式、静音时段、AI 配置（不含 API Key）
 ```
 
 恢复当前为「覆盖全部」模式，在数据库事务中完成；schemaVersion 不匹配时不会静默清空数据。
@@ -98,11 +88,11 @@ app/src/main/java/com/local/notebook/
 ├── data/
 │   ├── local/          Room 实体、DAO、数据库
 │   ├── repository/     仓库、设置
-│   ├── parser/         （domain/parser）纯 Kotlin 解析引擎
+│   ├── ai/             AI 客户端、API Key 加密、AI 解析执行器
 │   ├── backup/         zip 备份、恢复、自动备份 Worker
 │   └── importer/       CSV 导入导出
-├── domain/             纯 Kotlin 解析与金额算式
-├── service/            通知监听、处理器、反馈通知与动作
+├── domain/             纯 Kotlin 解析、关键词匹配与 AI 数据模型
+├── service/            通知监听、关键词初筛、AI Worker、反馈通知
 └── ui/                 主题、组件、页面、导航
 ```
 
@@ -112,7 +102,7 @@ app/src/main/java/com/local/notebook/
 ./gradlew testDebugUnitTest
 ```
 
-已覆盖：金额抽取与营销降权、方向词优先、L0/L1/L3 拦截、规则匹配、通用兜底、退款与红包、商用文案豁免、算式键盘、CSV 编解码。
+当前保留 CSV 编解码测试。规则引擎相关测试已随本地规则功能一并移除。
 
 ## 已知限制
 
@@ -122,14 +112,16 @@ app/src/main/java/com/local/notebook/
 - 静音时段固定 23:00–07:00，暂未提供时间自定义。
 - 自动备份由 WorkManager 调度，系统省电策略可能延后执行。
 - 小米等 ROM 可能限制后台广播与进程，调试注入通知在后台长时间后可能收不到；真实通知监听服务在开启自启动后正常工作。
-- 通用规则命中一律进入待确认，不直接入账。
+- AI 判定非交易时不会入账，只保留识别日志。
+- AI 请求失败或未配置 Key 时，命中关键词的通知会尽量转待确认，不会静默丢弃。
 - 通知内容被系统隐藏时无法解析。
 
 ## 隐私
 
-- `AndroidManifest.xml` 未声明 `INTERNET` 权限。
-- 无网络库、埋点、崩溃上报或广告 SDK。
-- 所有通知原文、账单与设置只保存在本机 Room / DataStore。
-- 备份由用户主动选择保存位置。
+- `AndroidManifest.xml` 声明了 `INTERNET` 权限，仅用于调用用户配置的 AI 接口。
+- 未开启 AI 解析时不会发起任何网络请求；开启后，命中关键词的通知标题与正文会发送给所配置的服务商。
+- API Key 使用 Android Keystore 加密保存在本机，不写入备份。
+- 账单、关键词与设置保存在本机 Room / DataStore；备份由用户主动选择保存位置。
+- 无埋点、崩溃上报或广告 SDK。
 
 版本：1.0

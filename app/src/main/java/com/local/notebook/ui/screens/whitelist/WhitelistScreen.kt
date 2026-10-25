@@ -121,37 +121,6 @@ fun WhitelistScreen(
         }
 
         item {
-            LedgerCard(
-                modifier = Modifier.padding(top = 10.dp),
-                shape = RoundedCornerShape(15.dp),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "通用兜底规则",
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = p.ink
-                        )
-                        Text(
-                            "未配置专属规则的白名单应用，命中后进入待确认，不会直接记账",
-                            fontSize = 10.5.sp,
-                            color = p.ink3,
-                            lineHeight = 15.sp,
-                            modifier = Modifier.padding(top = 3.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    LedgerSwitch(
-                        checked = state.fallbackEnabled,
-                        onCheckedChange = viewModel::setFallbackEnabled
-                    )
-                }
-            }
-        }
-
-        item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -70,7 +70,7 @@ fun ParseLogScreen(
                     onClick = onBack
                 )
                 Text(
-                    "解析日志",
+                    "AI 识别日志",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = p.ink,
@@ -122,21 +122,21 @@ fun ParseLogScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_rules),
+                            painter = painterResource(id = R.drawable.ic_ai),
                             contentDescription = null,
                             tint = p.ink3,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                     Text(
-                        if (filter == LogFilter.ALL) "还没有解析记录" else "这个分类下暂无记录",
+                        if (filter == LogFilter.ALL) "还没有 AI 识别记录" else "这个分类下暂无记录",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = p.ink,
                         modifier = Modifier.padding(top = 12.dp)
                     )
                     Text(
-                        "白名单应用的通知会在这里显示处理结果",
+                        "白名单应用命中交易关键词的通知会在这里显示 AI 结果",
                         fontSize = 10.5.sp,
                         color = p.ink3,
                         modifier = Modifier.padding(top = 4.dp)
@@ -172,14 +172,19 @@ private fun LogRow(log: NotificationRawEntity) {
         title.isNotEmpty() -> title
         else -> bodyFirst.ifBlank { "（空通知）" }
     }
-    val reason = log.rejectReason.orEmpty().ifBlank {
-        when (log.matchResult) {
-            "MATCHED" -> "已入账"
-            "PENDING" -> "待确认"
-            else -> "已拦截"
+    val reason = log.aiError?.takeIf { it.isNotBlank() }?.let { "AI 错误：$it" }
+        ?: log.rejectReason.orEmpty().ifBlank {
+            when (log.matchResult) {
+                "MATCHED", "AI_MATCHED" -> "已入账"
+                "PENDING", "AI_PENDING", "QUEUED" -> "待确认"
+                "AI_RETRY" -> "AI 请求重试中"
+                "AI_FAILED" -> "AI 识别失败"
+                "AI_IGNORED" -> "AI 判定非交易"
+                "AI_DUPLICATE" -> "重复交易"
+                else -> "已忽略"
+            }
         }
-    }
-    val rejected = log.matchResult == "REJECTED"
+    val rejected = log.matchResult in setOf("AI_IGNORED", "AI_FAILED", "AI_DUPLICATE", "REJECTED")
 
     Row(modifier = Modifier
         .fillMaxWidth()

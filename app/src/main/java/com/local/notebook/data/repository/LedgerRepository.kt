@@ -7,14 +7,13 @@ import com.local.notebook.data.local.CategoryEntity
 import com.local.notebook.data.local.LedgerDatabase
 import com.local.notebook.data.local.NotificationRawEntity
 import com.local.notebook.data.local.PendingRow
-import com.local.notebook.data.local.RuleEntity
+import com.local.notebook.data.local.TransactionKeywordEntity
 import com.local.notebook.data.local.TxnEditLogEntity
 import com.local.notebook.data.local.TxnEntity
 import com.local.notebook.data.local.TxnRow
 import com.local.notebook.data.repository.SeedContent.categories
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -24,16 +23,9 @@ import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val WECHAT_RULE_TEMPLATE =
-    "literal:微信支付,微信支付凭证,微信收款,收款到账,红包到账,退款到账,转账,已支付,支付成功,付款成功|slot:amount|fuzzy:true"
-private const val ALIPAY_RULE_TEMPLATE =
-    "literal:支付宝,支付成功,付款成功,你已成功付款,收款成功,到账,退款成功,还款成功,余额宝收益|slot:amount|fuzzy:true"
-private const val BUILTIN_RULE_VERSION = 2
-
 @Singleton
 class LedgerRepository @Inject constructor(
-    private val db: LedgerDatabase,
-    private val settings: SettingsRepository
+    private val db: LedgerDatabase
 ) {
     private val accountDao = db.accountDao()
     private val categoryDao = db.categoryDao()
@@ -41,7 +33,7 @@ class LedgerRepository @Inject constructor(
     private val editLogDao = db.txnEditLogDao()
     private val budgetDao = db.budgetDao()
     private val rawDao = db.notificationRawDao()
-    private val ruleDao = db.ruleDao()
+    private val keywordDao = db.transactionKeywordDao()
 
     private val seedMutex = Mutex()
 
@@ -51,16 +43,13 @@ class LedgerRepository @Inject constructor(
     val categories: Flow<List<CategoryEntity>> = categoryDao.observeAll()
     val budget: Flow<BudgetEntity?> = budgetDao.observeTotalMonthBudget()
     val rawLogs: Flow<List<NotificationRawEntity>> = rawDao.observeRecent()
-    val rules: Flow<List<RuleEntity>> = ruleDao.observeAll()
+    val keywords: Flow<List<TransactionKeywordEntity>> = keywordDao.observeAll()
     val pendingTxns: Flow<List<PendingRow>> = txnDao.observePendingRows()
     val pendingCount: Flow<Int> = txnDao.observePendingCount()
 
     suspend fun getTxn(id: Long): TxnEntity? = txnDao.getById(id)
 
     suspend fun getCategory(id: Long): CategoryEntity? = categoryDao.getById(id)
-
-    suspend fun rulesForPackage(packageName: String): List<RuleEntity> =
-        ruleDao.activeRulesForPackage(packageName)
 
     suspend fun findRecentRawByKey(key: String, since: Long): NotificationRawEntity? =
         rawDao.findRecentByKey(key, since)
@@ -81,99 +70,39 @@ class LedgerRepository @Inject constructor(
             ?: all.firstOrNull { it.name == name }?.id
     }
 
-    suspend fun defaultAccountIdForPackage(packageName: String): Long? {
-        val preferred = when (packageName) {
-            "com.tencent.mm" -> "微信零钱"
-            "com.eg.android.AlipayGphone" -> "支付宝余额"
-            else -> null
-        }
-        val accounts = accountDao.getAll().filterNot { it.archived }
-        return accounts.firstOrNull { it.name == preferred }?.id ?: accounts.firstOrNull()?.id
-    }
-
     suspend fun insertNotificationTransaction(txn: TxnEntity): Long = withContext(Dispatchers.IO) {
         val id = txnDao.insert(txn)
         recalculateBalances()
         id
     }
 
-    suspend fun recordRuleHit(ruleId: Long, at: Long) = ruleDao.recordHit(ruleId, at)
-
     suspend fun recentRawForPackage(packageName: String, since: Long): List<NotificationRawEntity> =
         rawDao.recentForPackage(packageName, since)
 
-    suspend fun getRule(id: Long): RuleEntity? = ruleDao.getById(id)
+    suspend fun getRaw(id: Long): NotificationRawEntity? = rawDao.getById(id)
 
-    suspend fun saveRule(rule: RuleEntity): Long = withContext(Dispatchers.IO) {
-        if (rule.id == 0L) {
-            ruleDao.insert(rule)
-        } else {
-            ruleDao.update(rule)
-            rule.id
-        }
-    }
+    suspend fun updateRawAiResult(
+        id: Long,
+        result: String,
+        reason: String?,
+        response: String?,
+        model: String?,
+        error: String?
+    ) = rawDao.updateAiResult(id, result, reason, response, model, error)
 
-    suspend fun setRuleState(id: Long, state: String) = withContext(Dispatchers.IO) {
-        ruleDao.getById(id)?.let { rule ->
-            ruleDao.update(rule.copy(state = state, updatedAt = System.currentTimeMillis()))
-        }
-    }
-
-    suspend fun deleteRule(id: Long): Boolean = withContext(Dispatchers.IO) {
-        val rule = ruleDao.getById(id) ?: return@withContext false
-        if (rule.isBuiltin) return@withContext false
-        ruleDao.deleteById(id)
-        true
-    }
-
-    suspend fun duplicateRule(id: Long): Long? = withContext(Dispatchers.IO) {
-        val source = ruleDao.getById(id) ?: return@withContext null
-        val now = System.currentTimeMillis()
-        ruleDao.insert(
-            source.copy(
-                id = 0,
-                name = "${source.name} 副本",
-                isBuiltin = false,
-                state = "OBSERVING",
-                statsHits = 0,
-                statsConfirmed = 0,
-                statsRejected = 0,
-                lastHitAt = null,
-                createdAt = now,
-                updatedAt = now
-            )
-        )
-    }
-
-    suspend fun moveRulePriority(id: Long, delta: Int) = withContext(Dispatchers.IO) {
-        ruleDao.getById(id)?.let { rule ->
-            ruleDao.update(
-                rule.copy(
-                    priority = (rule.priority + delta).coerceIn(0, 100),
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
-        }
-    }
-
-    suspend fun confirmPendingTransaction(id: Long): RuleEntity? = withContext(Dispatchers.IO) {
-        val txn = txnDao.getById(id) ?: return@withContext null
-        if (txn.status != "PENDING") return@withContext null
-        val rule = txn.ruleId?.let { ruleDao.getById(it) }
+    suspend fun confirmPendingTransaction(id: Long): Boolean = withContext(Dispatchers.IO) {
+        val txn = txnDao.getById(id) ?: return@withContext false
+        if (txn.status != "PENDING") return@withContext false
+        if (txn.type == "TRANSFER" && txn.toAccountId == null) return@withContext false
         val now = System.currentTimeMillis()
         db.withTransaction {
             txnDao.updateStatus(id, "NORMAL", now)
             txn.rawNotificationId?.let { rawId ->
-                rawDao.updateResult(
-                    rawId,
-                    "MATCHED",
-                    "${rule?.name ?: "通用规则"} → 已确认入账"
-                )
+                rawDao.updateResult(rawId, "AI_MATCHED", "用户确认入账")
             }
-            txn.ruleId?.let { ruleDao.recordConfirmed(it) }
         }
         recalculateBalances()
-        txn.ruleId?.let { ruleDao.getById(it) }
+        true
     }
 
     suspend fun rejectPendingTransaction(id: Long) = withContext(Dispatchers.IO) {
@@ -181,37 +110,26 @@ class LedgerRepository @Inject constructor(
         if (txn.status != "PENDING") return@withContext
         db.withTransaction {
             txn.rawNotificationId?.let { rawId ->
-                rawDao.updateResult(rawId, "REJECTED", "用户判为噪音")
+                rawDao.updateResult(rawId, "AI_IGNORED", "用户判为噪音")
             }
-            txn.ruleId?.let { ruleDao.recordRejected(it) }
             txnDao.deleteById(id)
         }
     }
 
-    suspend fun confirmAllPending(): List<RuleEntity> = withContext(Dispatchers.IO) {
+    suspend fun confirmAllPending() = withContext(Dispatchers.IO) {
         val pending = txnDao.getPendingEntities()
-        if (pending.isEmpty()) return@withContext emptyList()
+        if (pending.isEmpty()) return@withContext
         val now = System.currentTimeMillis()
-        val ruleIds = mutableSetOf<Long>()
         db.withTransaction {
             pending.forEach { txn ->
+                if (txn.type == "TRANSFER" && txn.toAccountId == null) return@forEach
                 txnDao.updateStatus(txn.id, "NORMAL", now)
-                val rule = txn.ruleId?.let { ruleDao.getById(it) }
                 txn.rawNotificationId?.let { rawId ->
-                    rawDao.updateResult(
-                        rawId,
-                        "MATCHED",
-                        "${rule?.name ?: "通用规则"} → 已确认入账"
-                    )
-                }
-                txn.ruleId?.let {
-                    ruleDao.recordConfirmed(it)
-                    ruleIds.add(it)
+                    rawDao.updateResult(rawId, "AI_MATCHED", "用户确认入账")
                 }
             }
         }
         recalculateBalances()
-        ruleIds.mapNotNull { ruleDao.getById(it) }
     }
 
     suspend fun rejectAllPending() = withContext(Dispatchers.IO) {
@@ -220,12 +138,42 @@ class LedgerRepository @Inject constructor(
         db.withTransaction {
             pending.forEach { txn ->
                 txn.rawNotificationId?.let { rawId ->
-                    rawDao.updateResult(rawId, "REJECTED", "用户判为噪音")
+                    rawDao.updateResult(rawId, "AI_IGNORED", "用户判为噪音")
                 }
-                txn.ruleId?.let { ruleDao.recordRejected(it) }
                 txnDao.deleteById(txn.id)
             }
         }
+    }
+
+    suspend fun enabledKeywords(): List<String> =
+        keywordDao.getEnabled().map { it.word }
+
+    suspend fun addKeyword(word: String): Long = withContext(Dispatchers.IO) {
+        val normalized = word.trim()
+        if (normalized.isEmpty()) return@withContext -1L
+        val existing = keywordDao.getAllOnce().firstOrNull { it.word == normalized }
+        if (existing != null) return@withContext existing.id
+        keywordDao.insert(
+            TransactionKeywordEntity(
+                word = normalized,
+                enabled = true,
+                isBuiltin = false,
+                sortOrder = (keywordDao.getAllOnce().maxOfOrNull { it.sortOrder } ?: 0) + 1
+            )
+        )
+    }
+
+    suspend fun setKeywordEnabled(id: Long, enabled: Boolean) = withContext(Dispatchers.IO) {
+        keywordDao.setEnabled(id, enabled)
+    }
+
+    suspend fun deleteKeyword(id: Long) = withContext(Dispatchers.IO) {
+        keywordDao.deleteById(id)
+    }
+
+    suspend fun restoreDefaultKeywords() = withContext(Dispatchers.IO) {
+        keywordDao.deleteAll()
+        keywordDao.insertAll(SeedContent.keywords())
     }
 
     fun observeEditLogs(txnId: Long): Flow<List<TxnEditLogEntity>> = editLogDao.observeByTxn(txnId)
@@ -560,45 +508,8 @@ class LedgerRepository @Inject constructor(
                     )
                 )
             }
-            if (ruleDao.count() == 0) {
-                ruleDao.insertAll(
-                    listOf(
-                        RuleEntity(
-                            name = "微信支付",
-                            packageName = "com.tencent.mm",
-                            priority = 20,
-                            isBuiltin = true,
-                            state = "ACTIVE",
-                            templateJson = WECHAT_RULE_TEMPLATE
-                        ),
-                        RuleEntity(
-                            name = "支付宝",
-                            packageName = "com.eg.android.AlipayGphone",
-                            priority = 20,
-                            isBuiltin = true,
-                            state = "ACTIVE",
-                            templateJson = ALIPAY_RULE_TEMPLATE
-                        )
-                    )
-                )
-                settings.setRuleSeedVersion(BUILTIN_RULE_VERSION)
-            } else if (settings.ruleSeedVersion.first() < BUILTIN_RULE_VERSION) {
-                ruleDao.builtinRules().forEach { rule ->
-                    val template = when (rule.name) {
-                        "微信支付" -> WECHAT_RULE_TEMPLATE
-                        "支付宝" -> ALIPAY_RULE_TEMPLATE
-                        else -> null
-                    }
-                    if (template != null && rule.templateJson != template) {
-                        ruleDao.update(
-                            rule.copy(
-                                templateJson = template,
-                                updatedAt = System.currentTimeMillis()
-                            )
-                        )
-                    }
-                }
-                settings.setRuleSeedVersion(BUILTIN_RULE_VERSION)
+            if (keywordDao.count() == 0) {
+                keywordDao.insertAll(SeedContent.keywords())
             }
             recalculateBalances()
         }
@@ -689,5 +600,17 @@ private object SeedContent {
                 )
             }
         }
+    }
+
+    fun keywords(): List<TransactionKeywordEntity> = listOf(
+        "支付", "付款", "消费", "扣款", "收款", "到账", "转账", "退款", "交易", "入账",
+        "已支付", "支付成功", "付款成功", "扣款成功", "收款成功", "退款成功", "还款", "缴费"
+    ).mapIndexed { index, word ->
+        TransactionKeywordEntity(
+            word = word,
+            enabled = true,
+            isBuiltin = true,
+            sortOrder = index
+        )
     }
 }

@@ -137,7 +137,7 @@ fun RestorePreviewDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "包含 ${preview.txnCount} 条账单、${preview.accountCount} 个账户、${preview.ruleCount} 条规则",
+                    "包含 ${preview.txnCount} 条账单、${preview.accountCount} 个账户、${preview.keywordCount} 个关键词",
                     fontSize = 11.5.sp,
                     color = p.ink2
                 )

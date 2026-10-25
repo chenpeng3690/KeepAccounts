@@ -25,6 +25,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +44,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.local.notebook.R
 import com.local.notebook.data.local.NotificationRawEntity
 import com.local.notebook.data.local.PendingRow
-import com.local.notebook.data.local.RuleEntity
 import com.local.notebook.ui.components.BadgeKind
 import com.local.notebook.ui.components.CategoryTile
 import com.local.notebook.ui.components.LedgerBadge
@@ -63,16 +63,23 @@ import java.time.LocalDate
 @Composable
 fun PendingScreen(
     onOpenLogs: () -> Unit,
-    onOpenRules: () -> Unit,
+    onOpenAiConfig: () -> Unit,
     onEditPending: (Long) -> Unit,
     snackbarHostState: SnackbarHostState,
     viewModel: PendingViewModel = hiltViewModel()
 ) {
     val p = LedgerTheme.palette
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val readyRule by viewModel.ruleReady.collectAsStateWithLifecycle()
+    val toast by viewModel.toast.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var showBatch by remember { mutableStateOf(false) }
+
+    LaunchedEffect(toast) {
+        toast?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeToast()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -145,24 +152,19 @@ fun PendingScreen(
                         }
                     },
                     onEdit = { onEditPending(row.id) },
-                    onConfirm = {
-                        scope.launch {
-                            viewModel.confirm(row.id)
-                            snackbarHostState.showSnackbar("已确认入账")
-                        }
-                    }
+                    onConfirm = { viewModel.confirm(row.id) }
                 )
                 Spacer(Modifier.height(9.dp))
             }
 
             Text(
-                "规则不准？去管理解析规则 ›",
+                "识别不准？去配置 AI ›",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = p.brand,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onOpenRules)
+                    .clickable(onClick = onOpenAiConfig)
                     .padding(vertical = 6.dp),
                 textAlign = TextAlign.Center
             )
@@ -181,7 +183,7 @@ fun PendingScreen(
             EmptyPending(
                 overview = state.overview,
                 onOpenLogs = onOpenLogs,
-                onOpenRules = onOpenRules
+                onOpenAiConfig = onOpenAiConfig
             )
         }
         Spacer(Modifier.height(16.dp))
@@ -223,13 +225,6 @@ fun PendingScreen(
         )
     }
 
-    readyRule?.let { rule ->
-        RuleReadyDialog(
-            rule = rule,
-            onEnable = { viewModel.enableRule(rule.id) },
-            onDismiss = viewModel::dismissRuleOffer
-        )
-    }
 }
 
 @Composable
@@ -244,14 +239,15 @@ private fun PendingCard(
     val tone = toneFor(row.packageName, appLabel)
     val timestamp = row.rawReceivedAt ?: row.occurredAt
     val timeText = formatPendingTime(timestamp)
-    val badgeText = when {
-        row.ruleId == null -> "通用规则"
-        row.ruleState == "OBSERVING" -> "规则观察中"
-        else -> row.ruleName ?: "规则命中"
+    val badgeText = when (row.rawResult) {
+        "AI_RETRY", "AI_FAILED" -> "AI 识别失败"
+        "AI_PENDING", "QUEUED" -> "AI 待确认"
+        "AI_MATCHED" -> "AI 已确认"
+        else -> if (row.ruleId != null) "旧规则" else "待确认"
     }
-    val badgeKind = when {
-        row.ruleId == null -> BadgeKind.WATCH
-        row.ruleState == "OBSERVING" -> BadgeKind.INFO
+    val badgeKind = when (row.rawResult) {
+        "AI_RETRY", "AI_FAILED" -> BadgeKind.INFO
+        "AI_PENDING", "QUEUED" -> BadgeKind.WATCH
         else -> BadgeKind.ACTIVE
     }
     val rawText = row.rawText?.takeIf { it.isNotBlank() }
@@ -327,7 +323,7 @@ private fun ExtractChip(text: String, bg: androidx.compose.ui.graphics.Color, fg
 private fun EmptyPending(
     overview: PendingOverview,
     onOpenLogs: () -> Unit,
-    onOpenRules: () -> Unit
+    onOpenAiConfig: () -> Unit
 ) {
     val p = LedgerTheme.palette
     Column(
@@ -358,7 +354,7 @@ private fun EmptyPending(
             modifier = Modifier.padding(top = 11.dp)
         )
         Text(
-            "自动记账正常工作中",
+            "AI 识别正常工作中",
             fontSize = 11.sp,
             color = p.ink3,
             modifier = Modifier.padding(top = 4.dp)
@@ -370,7 +366,7 @@ private fun EmptyPending(
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 14.dp)
         ) {
             Text(
-                "最近 7 天解析情况",
+                "最近 7 天 AI 识别",
                 fontSize = 10.5.sp,
                 color = p.ink3,
                 modifier = Modifier
@@ -386,7 +382,7 @@ private fun EmptyPending(
                         .height(26.dp)
                         .background(p.divider)
                 )
-                OverviewCell(overview.blocked.toString(), "已拦噪音", p.ink3, Modifier.weight(1f))
+                OverviewCell(overview.blocked.toString(), "已忽略", p.ink3, Modifier.weight(1f))
                 Box(
                     Modifier
                         .width(1.dp)
@@ -404,18 +400,18 @@ private fun EmptyPending(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "最近被拦下的通知",
+                "最近被 AI 忽略的通知",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = p.ink3,
                 modifier = Modifier.weight(1f)
             )
             Text(
-                "去管理规则 ›",
+                "去配置 AI ›",
                 fontSize = 11.sp,
                 color = p.brand,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable(onClick = onOpenRules)
+                modifier = Modifier.clickable(onClick = onOpenAiConfig)
             )
         }
 
@@ -425,7 +421,7 @@ private fun EmptyPending(
                 contentPadding = PaddingValues(14.dp)
             ) {
                 Text(
-                    "最近 7 天没有被拦下的通知",
+                    "最近 7 天没有被忽略的通知",
                     fontSize = 11.sp,
                     color = p.ink3,
                     modifier = Modifier.fillMaxWidth(),
@@ -517,36 +513,6 @@ private fun RejectedRow(raw: NotificationRawEntity) {
             color = p.ink3
         )
     }
-}
-
-@Composable
-private fun RuleReadyDialog(
-    rule: RuleEntity,
-    onEnable: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val p = LedgerTheme.palette
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = p.card,
-        title = {
-            Text("这条规则看起来可以了", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = p.ink)
-        },
-        text = {
-            Text(
-                "「${rule.name}」已累计确认 ${rule.statsConfirmed} 条，且没有误判。是否启用自动记账？",
-                fontSize = 12.sp,
-                color = p.ink2,
-                lineHeight = 18.sp
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onEnable) { Text("启用自动记账", color = p.brand) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("再观察一下", color = p.ink2) }
-        }
-    )
 }
 
 private fun toneFor(packageName: String?, label: String): LedgerTone {

@@ -95,31 +95,22 @@ data class NotificationRawEntity(
     val postedAt: Long,
     val receivedAt: Long,
     val groupKey: String? = null,
+    /** 旧版规则字段，仅用于兼容历史数据与备份，不再写入。 */
     val ruleId: Long? = null,
     val matchResult: String,
-    val rejectReason: String? = null
+    val rejectReason: String? = null,
+    val aiResponse: String? = null,
+    val aiModel: String? = null,
+    val aiError: String? = null
 )
 
-@Entity(tableName = "rule")
-data class RuleEntity(
+@Entity(tableName = "transaction_keyword")
+data class TransactionKeywordEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    val packageName: String? = null,
-    val priority: Int = 0,
+    val word: String,
+    val enabled: Boolean = true,
     val isBuiltin: Boolean = false,
-    val state: String = "OBSERVING",
-    val templateJson: String = "",
-    val directionWords: String = "",
-    val excludeKeywords: String = "",
-    val defaultAccountId: Long? = null,
-    val defaultCategoryId: Long? = null,
-    val amountHint: Long? = null,
-    val statsHits: Int = 0,
-    val statsConfirmed: Int = 0,
-    val statsRejected: Int = 0,
-    val lastHitAt: Long? = null,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val sortOrder: Int = 0
 )
 
 @Entity(tableName = "backup_record")
@@ -157,7 +148,7 @@ data class TxnRow(
     val categoryTone: String?
 )
 
-/** 待确认箱联表结果，附带通知原文与规则状态。 */
+/** 待确认箱联表结果，附带通知原文与 AI 结果。 */
 data class PendingRow(
     val id: Long,
     val type: String,
@@ -173,8 +164,6 @@ data class PendingRow(
     val categoryName: String?,
     val categoryIcon: String?,
     val categoryTone: String?,
-    val ruleName: String?,
-    val ruleState: String?,
     val appLabel: String?,
     val packageName: String?,
     val rawTitle: String?,

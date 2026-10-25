@@ -53,13 +53,25 @@ class SettingsViewModel @Inject constructor(
         initialValue = emptySet()
     )
 
-    val ruleCount: StateFlow<Int> = repository.rules
+    val keywordCount: StateFlow<Int> = repository.keywords
         .map { it.size }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = 0
         )
+
+    val aiEnabled: StateFlow<Boolean> = settings.aiEnabled.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = false
+    )
+
+    val aiMode: StateFlow<String> = settings.aiMode.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = "DIRECT"
+    )
 
     val themeMode: StateFlow<String> = settings.themeMode.stateIn(
         scope = viewModelScope,
@@ -131,6 +143,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setFeedbackMode(mode: String) {
         viewModelScope.launch { settings.setFeedbackMode(mode) }
+    }
+
+    fun setAiMode(mode: String) {
+        viewModelScope.launch { settings.setAiMode(mode) }
     }
 
     fun setAutoBackupEnabled(enabled: Boolean) {
